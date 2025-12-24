@@ -1,93 +1,246 @@
-# git-hooks
+# Git Hooks
 
+[![Latest Version](https://img.shields.io/packagist/v/cihispano/git-hooks.svg)](https://packagist.org/packages/cihispano/git-hooks)
+[![Total Downloads](https://img.shields.io/packagist/dt/cihispano/git-hooks.svg)](https://packagist.org/packages/cihispano/git-hooks)
+[![License](https://img.shields.io/packagist/l/cihispano/git-hooks.svg)](https://packagist.org/packages/cihispano/git-hooks)
+[![PHP Version](https://img.shields.io/packagist/php-v/cihispano/git-hooks.svg)](https://packagist.org/packages/cihispano/git-hooks)
 
+Automated Git Hooks for CodeIgniter 4 projects with integrated code quality checks. This package automatically installs pre-commit hooks that validate your PHP code before each commit.
 
-## Getting started
+## ✨ Features
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- 🔍 **PHP Syntax Check (Lint)** - Validates PHP syntax on staged files
+- 📊 **PHPStan Static Analysis** - Detects potential errors before runtime
+- 🎨 **PHP CS Fixer** - Ensures code follows coding standards
+- 🎯 **Smart Analysis** - Only analyzes staged files for better performance
+- 🌈 **Colorful Output** - Beautiful console output with icons and colors
+- ⚡ **Easy Installation** - Automatic setup via Composer
+- 🔧 **Zero Configuration** - Works out of the box
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## 📋 Requirements
 
-## Add your files
+- PHP 8.1 or higher
+- Git 2.0 or higher
+- Composer 2.0 or higher
 
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## 📦 Installation
+
+Install via Composer:
+
+```bash
+composer require --dev cihispano/git-hooks
+```
+
+The hooks will be installed automatically after installation.
+
+### Manual Installation
+
+If you need to reinstall the hooks:
+
+```bash
+composer run-script install-git-hooks
+```
+
+## 🚀 Usage
+
+Once installed, the hooks work automatically. Every time you commit code, the pre-commit hook will:
+
+1. ✅ Check PHP syntax on all staged `.php` files
+2. ✅ Run PHPStan analysis (if installed)
+3. ✅ Verify code style with PHP CS Fixer (if installed)
+
+### Example Output
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/cihispano.org/git-hooks.git
-git branch -M main
-git push -uf origin main
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Starting CodeIgniter pre-commit checks...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[1/3] Checking PHP syntax...
+✓ PHP syntax check passed
+
+[2/3] Running PHPStan analysis...
+✓ PHPStan analysis passed
+
+[3/3] Checking code style (PHP CS Fixer)...
+✓ Code style check passed
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ All checks passed! Proceeding with commit...
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-## Integrate with your tools
+### When a Check Fails
 
-* [Set up project integrations](https://gitlab.com/cihispano.org/git-hooks/-/settings/integrations)
+If any check fails, the commit will be blocked:
 
-## Collaborate with your team
+```
+[3/3] Checking code style (PHP CS Fixer)...
+✗ Code style issues in: app/Controllers/Home.php
+Run: php vendor/bin/php-cs-fixer fix app/Controllers/Home.php
+```
 
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+Fix the issues and try again:
 
-## Test and Deploy
+```bash
+# Fix code style automatically
+composer cs-fix
 
-Use the built-in continuous integration in GitLab.
+# Stage the fixed files
+git add .
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+# Try committing again
+git commit -m "Your message"
+```
 
-***
+## 🛠️ Configuration
 
-# Editing this README
+### Skipping Hooks (Not Recommended)
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+If you need to commit without running the hooks:
 
-## Suggestions for a good README
+```bash
+git commit --no-verify -m "Emergency fix"
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+⚠️ **Warning:** Only use this in emergencies. Your code should always pass the quality checks.
 
-## Name
-Choose a self-explaining name for your project.
+### Uninstalling Hooks
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+To remove the Git hooks:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```bash
+composer run-script uninstall-git-hooks
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Customizing the Hooks
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+The hooks are located in your project's `.git/hooks/` directory after installation. You can modify them if needed, but keep in mind they will be overwritten when you update the package.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## 📊 Composer Scripts
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+This package provides the following Composer scripts:
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```json
+{
+    "scripts": {
+        "install-git-hooks": "CiHispano\\GitHooks\\ComposerScripts::installGitHooks",
+        "uninstall-git-hooks": "CiHispano\\GitHooks\\ComposerScripts::uninstallGitHooks"
+    }
+}
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+Add these to your `composer.json` to access them easily:
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```bash
+composer install-git-hooks
+composer uninstall-git-hooks
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## 🔧 Integration with Existing Projects
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### With PHPStan
 
-## License
-For open source projects, say how it is licensed.
+Add PHPStan to your project:
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+```bash
+composer require --dev phpstan/phpstan
+```
+
+Create `phpstan.neon`:
+
+```neon
+parameters:
+    level: max
+    paths:
+        - app
+```
+
+### With PHP CS Fixer
+
+Add PHP CS Fixer to your project:
+
+```bash
+composer require --dev friendsofphp/php-cs-fixer
+```
+
+Create `.php-cs-fixer.dist.php`:
+
+```php
+<?php
+
+use PhpCsFixer\Config;
+use PhpCsFixer\Finder;
+
+$finder = Finder::create()
+    ->in(__DIR__ . '/app')
+    ->name('*.php');
+
+return (new Config())
+    ->setRules([
+        '@PSR12' => true,
+        'array_syntax' => ['syntax' => 'short'],
+    ])
+    ->setFinder($finder);
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/cihispano/git-hooks.git
+cd git-hooks
+
+# Install dependencies
+composer install
+
+# Run tests
+composer test
+
+# Check code style
+composer cs
+
+# Fix code style
+composer cs-fix
+```
+
+## 📝 Changelog
+
+Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+
+## 🔒 Security
+
+If you discover any security-related issues, please email security@cihispano.org instead of using the issue tracker.
+
+## 📄 License
+
+The MIT License (MIT). Please see [License File](LICENSE) for more information.
+
+## 👥 Credits
+
+- [Jorge Armando Pacheco](https://github.com/yourusername)
+- [All Contributors](../../contributors)
+
+## 🌟 Support
+
+If you find this package helpful, please consider:
+
+- ⭐ Starring the repository
+- 🐛 Reporting bugs
+- 💡 Suggesting new features
+- 📖 Improving documentation
+- 🔀 Contributing code
+
+## 📚 Related Packages
+
+- [codeigniter4/framework](https://github.com/codeigniter4/CodeIgniter4) - The CodeIgniter 4 framework
+- [phpstan/phpstan](https://github.com/phpstan/phpstan) - PHP Static Analysis Tool
+- [friendsofphp/php-cs-fixer](https://github.com/PHP-CS-Fixer/PHP-CS-Fixer) - PHP Coding Standards Fixer
+
+---
+
+Made with ❤️ for the CodeIgniter community
