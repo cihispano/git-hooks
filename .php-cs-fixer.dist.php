@@ -1,86 +1,113 @@
 <?php
-/*
- * Copyright (c) 2025.
- * This file is part of CiHispano Breadcrumbs library.
- *
- * @copyright CiHispano <administracion@cihispano.org>
- * @license For the full copyright and license information, please view  the LICENSE file that was distributed with this source code.
- *
- */
 
 declare(strict_types=1);
 
-require_once 'vendor/autoload.php';
+/*
+ * Copyright (c) 2025.
+ * This file is part of CiHispano Git Hooks library.
+ *
+ * @copyright CiHispano <administracion@cihispano.org>
+ * @license For the full copyright and license information, see the LICENSE file distributed with this source code.
+ */
 
-use PhpCsFixer\Finder;
 use PhpCsFixer\Config;
+use PhpCsFixer\Finder;
 
 $finder = Finder::create()
-    ->in([__DIR__, './src'])
+    ->in([
+        __DIR__ . '/src',
+    ])
     ->files()
-    ->exclude(['build', 'vendor'])
-    ->ignoreVCSIgnored(true)
-    ->ignoreDotFiles(false)
-    ->append([__FILE__]);
+    ->exclude([
+        'vendor',
+        'writable',
+        'builds',
+        'build',
+        'docs',
+        '.git',
+    ])
+    ->name('*.php')
+    ->ignoreDotFiles(true)
+    ->ignoreVCS(true)
+    ->ignoreVCSIgnored(false)
+    ->append([__FILE__])
+;
 
-return (new Config())
+$config = new Config();
+$config
     ->setRiskyAllowed(true)
     ->setCacheFile('build/.php-cs-fixer.cache')
     ->setRules([
         '@PSR12' => true,
-        '@PHP84Migration' => true, // Prepare the code for PHP 8.4 (Hooks, etc.)
+
         '@PhpCsFixer' => true,
         '@PhpCsFixer:risky' => true,
 
-        // Allows instantiation and access to members without additional parentheses (PHP 8.4)
-        'new_with_parentheses' => [
-            'anonymous_class' => false,
-            'named_class' => false,
+        'header_comment' => [
+            'header' => "Copyright (c) 2025.\nThis file is part of CiHispano Git Hooks library.\n\n@copyright CiHispano <administracion@cihispano.org>\n@license For the full copyright and license information, see the LICENSE file distributed with this source code.",
+            'comment_type' => 'comment',
+            'separate' => 'both',
         ],
 
-        // Trailing commas in everything PHP 8.x allows (arrays, arguments, parameters)
-        'trailing_comma_in_multiline' => [
-            'elements' => ['arrays', 'arguments', 'parameters', 'match'],
-        ],
-
-        // Style and Cleanliness
-        'modernize_strpos' => true, 
+        'strict_param' => true,
         'declare_strict_types' => true,
-        'array_syntax' => ['syntax' => 'short'],
-        'list_syntax' => ['syntax' => 'short'],
-        
-        // Import Management
         'no_unused_imports' => true,
-        'fully_qualified_strict_types' => true,
-        'global_namespace_import' => [
-            'import_classes' => true,
-            'import_functions' => true,
-            'import_constants' => true,
-        ],
 
-        // Order of elements (Updated for Property Hooks 8.4)
-        'ordered_class_elements' => [
-            'order' => [
-                'use_trait',
-                'constant_public',
-                'constant_protected',
-                'constant_private',
-                'property_public',
-                'property_protected',
-                'property_private',
-                'construct',
-                'method_public',
-                'method_protected',
-                'method_private',
+        'array_syntax' => ['syntax' => 'short'],
+        'ordered_imports' => ['sort_algorithm' => 'alpha'],
+        'not_operator_with_successor_space' => false,
+        'trailing_comma_in_multiline' => ['elements' => ['arrays']],
+        'phpdoc_scalar' => true,
+        'unary_operator_spaces' => true,
+        'binary_operator_spaces' => [
+            'default' => 'single_space',
+        ],
+        'blank_line_before_statement' => [
+            'statements' => ['break', 'continue', 'declare', 'return', 'throw', 'try'],
+        ],
+        'phpdoc_single_line_var_spacing' => true,
+        'phpdoc_var_without_name' => true,
+        'class_attributes_separation' => [
+            'elements' => [
+                'method' => 'one',
             ],
-            'sort_algorithm' => 'none',
         ],
-
-        // (Optional, but trending in 8.x)
-        'yoda_style' => [
-            'equal' => false,
-            'identical' => false,
-            'less_and_greater' => false,
+        'function_declaration' => [
+            'closure_function_spacing' => 'one',
+        ],
+        'method_argument_space' => [
+            'on_multiline' => 'ensure_fully_multiline',
+            'keep_multiple_spaces_after_comma' => true,
+        ],
+        'single_trait_insert_per_statement' => true,
+        'single_line_empty_body' => false,
+        'no_whitespace_in_blank_line' => true,
+        'single_blank_line_at_eof' => true,
+        'trim_array_spaces' => true,
+        'no_extra_blank_lines' => [
+            'tokens' => [
+                'extra',
+                'throw',
+                'use',
+            ],
+        ],
+        'concat_space' => [
+            'spacing' => 'one',
+        ],
+        'type_declaration_spaces' => true,
+        'return_type_declaration' => ['space_before' => 'none'],
+        'no_spaces_around_offset' => true,
+        'whitespace_after_comma_in_array' => true,
+        'native_function_invocation' => [
+            'include' => ['@all'],
+            'scope' => 'namespaced',
+            'strict' => true,
         ],
     ])
-->setFinder($finder);
+    ->setFinder($finder)
+    ->setRiskyAllowed(true)
+    ->setUsingCache(true)
+    ->setCacheFile(__DIR__ . '/build/.php-cs-fixer.cache')
+;
+
+return $config;
