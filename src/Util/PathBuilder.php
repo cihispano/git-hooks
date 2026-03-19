@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
- * Copyright (c) 2025.
+ * Copyright (c) 2026.
  * This file is part of CiHispano Git Hooks library.
  *
  * @copyright CiHispano <administracion@cihispano.org>
@@ -19,6 +19,14 @@ namespace CiHispano\Util;
  */
 final class PathBuilder
 {
+    /**
+     * Private constructor to prevent instantiation.
+     * This class should only be used for its constants.
+     */
+    private function __construct()
+    {
+    }
+
     /**
      * Join directory and filename into a complete path.
      */

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
- * Copyright (c) 2025.
+ * Copyright (c) 2026.
  * This file is part of CiHispano Git Hooks library.
  *
  * @copyright CiHispano <administracion@cihispano.org>
@@ -20,26 +20,36 @@ namespace CiHispano;
 final class Config
 {
     /**
+     * Default hash algorithm to use.
+     */
+    public const string DEFAULT_ALGORITHM = 'sha256';
+
+    /**
      * Git hooks directory relative path.
      */
-    public const GIT_HOOKS_DIR = '.git' . \DIRECTORY_SEPARATOR . 'hooks';
+    public const string GIT_HOOKS_DIR = '.git' . \DIRECTORY_SEPARATOR . 'hooks';
+
+    /**
+     * Build directory name.
+     */
+    public const string BUILD_DIR = 'build';
 
     /**
      * Source directory name.
      */
-    public const SRC_DIR = 'src';
+    public const string SRC_DIR = 'src';
 
     /**
      * Hooks source directory name.
      */
-    public const HOOKS_SOURCE_DIR = 'Hooks';
+    public const string HOOKS_SOURCE_DIR = 'Hooks';
 
     /**
      * Default hook files available for installation.
      *
      * @var array<string>
      */
-    public const DEFAULT_HOOKS = [
+    public const array DEFAULT_HOOKS = [
         'pre-commit',
         'commit-msg',
         'pre-push',
@@ -50,7 +60,7 @@ final class Config
      *
      * @var array<string>
      */
-    public const EXCLUDED_EXTENSIONS = [
+    public const array EXCLUDED_EXTENSIONS = [
         '.sample',
         '.txt',
         '.md',
@@ -60,44 +70,44 @@ final class Config
     /**
      * Default separator line length.
      */
-    public const SEPARATOR_LENGTH = 50;
+    public const int SEPARATOR_LENGTH = 50;
 
     /**
      * Console color for success messages.
      */
-    public const COLOR_SUCCESS = 'green';
+    public const string COLOR_SUCCESS = 'green';
 
     /**
      * Console color for error messages.
      */
-    public const COLOR_ERROR = 'red';
+    public const string COLOR_ERROR = 'red';
 
     /**
      * Console color for warning messages.
      */
-    public const COLOR_WARNING = 'yellow';
+    public const string COLOR_WARNING = 'yellow';
 
     /**
      * Console color for info messages.
      */
-    public const COLOR_INFO = 'cyan';
+    public const string COLOR_INFO = 'cyan';
 
     /**
      * Maximum allowed hook file size in bytes.
      *
      * Default: 1MB
      */
-    public const MAX_HOOK_FILE_SIZE = 1048576;
+    public const int MAX_HOOK_FILE_SIZE = 1048576;
 
     /**
      * Minimum PHP version required.
      */
-    public const MIN_PHP_VERSION = '8.2.0';
+    public const string MIN_PHP_VERSION = '8.2.0';
 
     /**
      * Path to Termwind functions file relative to vendor.
      */
-    public const TERMWIND_FUNCTIONS_PATH = '/nunomaduro/termwind/src/Functions.php';
+    public const string TERMWIND_FUNCTIONS_PATH = '/nunomaduro/termwind/src/Functions.php';
 
     /**
      * Private constructor to prevent instantiation.
