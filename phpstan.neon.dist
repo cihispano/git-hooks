@@ -1,6 +1,25 @@
+# Copyright (c) 2025.
+# This file is part of CiHispano Git Hooks library.
+
 parameters:
-    tmpDir: build/phpstan
-    level: 9
+    # We keep your 'max' level for top-tier code quality
+    level: max
+
     paths:
-        - src/
-        - tests/
+        - src
+
+    # Set a consistent temporary directory for the cache
+    tmpDir: build/phpstan
+
+    # Your strict analysis settings
+    treatPhpDocTypesAsCertain: true
+    reportUnmatchedIgnoredErrors: true
+
+    # Exclude directories that shouldn't be analyzed
+    excludePaths:
+        - vendor
+        - writable (?)
+        - build
+
+includes:
+    - vendor/phpstan/phpstan/conf/bleedingEdge.neon

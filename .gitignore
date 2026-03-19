@@ -14,7 +14,6 @@
 *.sig
 
 pkg/
-src/
 
 ### Composer ###
 composer.phar
@@ -22,7 +21,7 @@ composer.phar
 
 # Commit your application's lock file https://getcomposer.org/doc/01-basic-usage.md#commit-your-composer-lock-file-to-version-control
 # You may choose to ignore a library lock file http://getcomposer.org/doc/02-libraries.md#lock-file
-# composer.lock
+composer.lock
 
 ### Intellij ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
@@ -284,6 +283,8 @@ phpcs.xml
 # Generated files
 .phpunit.result.cache
 .phpunit.cache
+/.phpunit.result.cache
+/.phpunit.cache/
 
 # PHPUnit
 /app/phpunit.xml
@@ -566,6 +567,7 @@ _pkginfo.txt
 *.[Cc]ache
 # but keep track of directories ending in .cache
 !?*.[Cc]ache/
+/.phpunit.cache/
 
 # Others
 ClientBin/

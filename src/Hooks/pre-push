@@ -1,0 +1,76 @@
+#!/bin/sh
+
+# ══════════════════════════════════════════════════════════════════════════
+# Copyright (c) 2025.
+# This file is part of CiHispano Git Hooks library.
+#
+# @copyright CiHispano <administracion@cihispano.org>
+# @license For the full copyright and license information, see the LICENSE file distributed with this source code.
+# ══════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════
+# 1. ENVIRONMENT SETUP
+# ══════════════════════════════════════════════════════════════════════════
+
+# Determine project root
+PROJECT_ROOT=$(php -r "echo dirname(dirname(dirname(realpath('$0'))));")
+VENDOR_BIN="$PROJECT_ROOT/vendor/bin"
+PACKAGE_CONFIG="$PROJECT_ROOT/vendor/cihispano/git-hooks"
+export XDEBUG_MODE=off
+PHP_XDEBUG_FLAGS="-d xdebug.mode=off -d xdebug.log="
+
+echo ""
+echo -e "\033[0;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+echo -e "\033[1;35m   CiHispano: Final Integrity Checks before Push          \033[0m"
+echo -e "\033[0;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+
+# Switch to project root
+cd "$PROJECT_ROOT"
+
+# ══════════════════════════════════════════════════════════════════════════
+# 1. PHPUNIT (Logic & Regression Tests)
+# ══════════════════════════════════════════════════════════════════════════
+if [ -f "$VENDOR_BIN/phpunit" ]; then
+    echo -e "\033[1;34m  [1/2] Running Unit Tests (PHPUnit)...\033[0m"
+    
+    # Priority: Project root phpunit.xml > phpunit.xml.dist > Package central config
+    PHPUNIT_CONFIG="phpunit.xml"
+    [ ! -f "$PHPUNIT_CONFIG" ] && PHPUNIT_CONFIG="phpunit.xml.dist"
+    [ ! -f "$PHPUNIT_CONFIG" ] && PHPUNIT_CONFIG="$PACKAGE_CONFIG/phpunit.xml.dist"
+
+    php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/phpunit" -c "$PHPUNIT_CONFIG" --no-coverage --stop-on-failure
+    
+    if [ $? != 0 ]; then
+        echo -e "\n  \033[0;31m✘ Tests failed! Please fix your code before pushing.\033[0m\n"
+        exit 1
+    fi
+    echo -e "  \033[0;32m✔ All tests passed\033[0m"
+else
+    echo -e "  \033[0;33m⚠ PHPUnit not found. Skipping logic tests...\033[0m"
+fi
+
+# ══════════════════════════════════════════════════════════════════════════
+# 2. FULL PROJECT ANALYSIS (PHPStan)
+# ══════════════════════════════════════════════════════════════════════════
+if [ -f "$VENDOR_BIN/phpstan" ]; then
+    echo -e "\n\033[1;34m  [2/2] Running Full Static Analysis (PHPStan)...\033[0m"
+    
+    # Priority: Project root phpstan.neon > phpstan.neon.dist > Package central config
+    STAN_CONFIG="phpstan.neon"
+    [ ! -f "$STAN_CONFIG" ] && STAN_CONFIG="phpstan.neon.dist"
+    [ ! -f "$STAN_CONFIG" ] && STAN_CONFIG="$PACKAGE_CONFIG/phpstan.neon.dist"
+
+    # We analyze the whole project on push to ensure global consistency
+    php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/phpstan" analyse -c "$STAN_CONFIG" --no-progress --ansi
+    
+    if [ $? != 0 ]; then
+        echo -e "\n  \033[0;31m✘ PHPStan found global issues. Fix them before pushing.\033[0m\n"
+        exit 1
+    fi
+    echo -e "  \033[0;32m✔ Full analysis completed successfully\033[0m"
+fi
+
+echo ""
+echo -e "\033[0;32m  ✔ Integrity verified. It's safe to push! \033[0m"
+echo ""
+exit 0

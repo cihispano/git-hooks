@@ -1,31 +1,31 @@
-# Git Hooks
+# Git Hooks for CodeIgniter 4
 
 [![Latest Version](https://img.shields.io/packagist/v/cihispano/git-hooks.svg)](https://packagist.org/packages/cihispano/git-hooks)
 [![Total Downloads](https://img.shields.io/packagist/dt/cihispano/git-hooks.svg)](https://packagist.org/packages/cihispano/git-hooks)
 [![License](https://img.shields.io/packagist/l/cihispano/git-hooks.svg)](https://packagist.org/packages/cihispano/git-hooks)
 [![PHP Version](https://img.shields.io/packagist/php-v/cihispano/git-hooks.svg)](https://packagist.org/packages/cihispano/git-hooks)
 
-Automated Git Hooks for CodeIgniter 4 projects with integrated code quality checks. This package automatically installs pre-commit hooks that validate your PHP code before each commit.
+Automated Git Hooks for CodeIgniter 4 projects. This package ensures your code meets the highest quality standards by running automated checks before every commit.
 
 ## ✨ Features
 
-- 🔍 **PHP Syntax Check (Lint)** - Validates PHP syntax on staged files
-- 📊 **PHPStan Static Analysis** - Detects potential errors before runtime
-- 🎨 **PHP CS Fixer** - Ensures code follows coding standards
-- 🎯 **Smart Analysis** - Only analyzes staged files for better performance
-- 🌈 **Colorful Output** - Beautiful console output with icons and colors
-- ⚡ **Easy Installation** - Automatic setup via Composer
-- 🔧 **Zero Configuration** - Works out of the box
+- 🔍 **PHP Syntax Check** - Validates PHP syntax (lint) on all staged files.
+- 📊 **PHPStan Analysis** - Performs deep static analysis to find potential bugs (Level: Max).
+- 👃 **PHP_CodeSniffer** - Validates PSR-12 compliance and coding standards.
+- 🎨 **PHP CS Fixer** - Automatically formats code to follow defined styles.
+- 🎯 **Smart Scope** - Only analyzes staged files to keep your workflow fast.
+- 🌈 **Termwind Output** - Beautiful, colorful console feedback with icons.
+- 🔧 **Zero Config** - Works out of the box with sensible defaults for CI4.
 
 ## 📋 Requirements
 
-- PHP 8.1 or higher
-- Git 2.0 or higher
-- Composer 2.0 or higher
+- **PHP 8.4** or higher
+- **Git 2.0** or higher
+- **Composer 2.0** or higher
 
 ## 📦 Installation
 
-Install via Composer:
+Install the package as a development dependency:
 
 ```bash
 composer require --dev cihispano/git-hooks
@@ -38,32 +38,59 @@ The hooks will be installed automatically after installation.
 If you need to reinstall the hooks:
 
 ```bash
-composer run-script install-git-hooks
+composer run-script install-hooks
 ```
 
 ## 🚀 Usage
 
-Once installed, the hooks work automatically. Every time you commit code, the pre-commit hook will:
+Once installed, the hooks work automatically.
+
+### `pre-commit`
+
+Every time you commit code, the `pre-commit` hook will:
 
 1. ✅ Check PHP syntax on all staged `.php` files
 2. ✅ Run PHPStan analysis (if installed)
-3. ✅ Verify code style with PHP CS Fixer (if installed)
+3. ✅ Check PSR-12 compliance with PHP_CodeSniffer (if installed)
+4. ✅ Verify formatting with PHP CS Fixer (if installed)
+
+### `commit-msg`
+
+The `commit-msg` hook validates the first line of your commit message:
+
+1. ✅ Minimum 10 characters
+2. ✅ Maximum 100 characters
+3. ✅ Conventional Commits format
+
+See [`docs/CONVENTIONAL_COMMITS.md`](docs/CONVENTIONAL_COMMITS.md) for examples and guidance.
+
+### `pre-push`
+
+Before pushing, the `pre-push` hook runs a full-project validation:
+
+1. ✅ PHPUnit, if available in the target project
+2. ✅ Full PHPStan analysis
+
+This repository does not currently ship its own automated test suite. However, the installed `pre-push` hook is designed for consumer projects and will run PHPUnit there when it is available. If PHPUnit is not installed in the target project, the hook skips that step and continues with the remaining checks.
 
 ### Example Output
 
-```
+```bash
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Starting CodeIgniter pre-commit checks...
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[1/3] Checking PHP syntax...
-✓ PHP syntax check passed
+[1/4] Checking PHP syntax...
+✓ Syntax check passed
 
-[2/3] Running PHPStan analysis...
-✓ PHPStan analysis passed
+[2/4] Running PHPStan analysis...
+✓ Analysis passed
 
-[3/3] Checking code style (PHP CS Fixer)...
-✓ Code style check passed
+[3/4] Sniffing code style (PHPCS)...
+✓ PSR-12 compliance verified
+
+[4/4] Verifying formatting (PHP CS Fixer)...
+✓ Style check passed
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✓ All checks passed! Proceeding with commit...
@@ -74,8 +101,8 @@ Starting CodeIgniter pre-commit checks...
 
 If any check fails, the commit will be blocked:
 
-```
-[3/3] Checking code style (PHP CS Fixer)...
+```bash
+[4/4] Verifying formatting (PHP CS Fixer)...
 ✗ Code style issues in: app/Controllers/Home.php
 Run: php vendor/bin/php-cs-fixer fix app/Controllers/Home.php
 ```
@@ -110,7 +137,7 @@ git commit --no-verify -m "Emergency fix"
 To remove the Git hooks:
 
 ```bash
-composer run-script uninstall-git-hooks
+composer run-script uninstall-hooks
 ```
 
 ### Customizing the Hooks
@@ -124,8 +151,11 @@ This package provides the following Composer scripts:
 ```json
 {
     "scripts": {
-        "install-git-hooks": "CiHispano\\GitHooks\\ComposerScripts::installGitHooks",
-        "uninstall-git-hooks": "CiHispano\\GitHooks\\ComposerScripts::uninstallGitHooks"
+        "install-hooks": "CiHispano\\ComposerScripts::install",
+        "uninstall-hooks": "CiHispano\\ComposerScripts::uninstall",
+        "analyze": "phpstan analyze --verbose",
+        "sniff": "phpcs",
+        "cs": "vendor/bin/php-cs-fixer fix --ansi --verbose --dry-run --diff"
     }
 }
 ```
@@ -133,8 +163,11 @@ This package provides the following Composer scripts:
 Add these to your `composer.json` to access them easily:
 
 ```bash
-composer install-git-hooks
-composer uninstall-git-hooks
+composer install-hooks
+composer uninstall-hooks
+composer analyze
+composer sniff
+composer cs
 ```
 
 ## 🔧 Integration with Existing Projects
@@ -198,15 +231,25 @@ cd git-hooks
 # Install dependencies
 composer install
 
-# Run tests
-composer test
+# Run all active quality checks
+composer check:all
 
-# Check code style
+# Or run them individually
+composer analyze
+composer sniff
 composer cs
 
 # Fix code style
 composer cs-fix
 ```
+
+### Test Suite Status
+
+The automated test suite for this package was intentionally moved to a separate task and is not part of the current repository state. The package itself is currently maintained through static analysis and style checks, while the installed hooks still support running PHPUnit inside consumer projects when available. At the moment, the maintained quality gates for this repository are:
+
+- `composer analyze`
+- `composer sniff`
+- `composer cs`
 
 ## 📝 Changelog
 
@@ -214,7 +257,7 @@ Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed re
 
 ## 🔒 Security
 
-If you discover any security-related issues, please email security@cihispano.org instead of using the issue tracker.
+If you discover any security-related issues, please email <security@cihispano.org> instead of using the issue tracker.
 
 ## 📄 License
 
@@ -222,7 +265,7 @@ The MIT License (MIT). Please see [License File](LICENSE) for more information.
 
 ## 👥 Credits
 
-- [Jorge Armando Pacheco](https://github.com/yourusername)
+- [Jorge Armando Pacheco](https://github.com/jarmandopacheco)
 - [All Contributors](../../contributors)
 
 ## 🌟 Support
