@@ -1,0 +1,118 @@
+#!/bin/sh
+
+# ══════════════════════════════════════════════════════════════════════════
+# Copyright (c) 2025.
+# This file is part of CiHispano Git Hooks library.
+#
+# @copyright CiHispano <administracion@cihispano.org>
+# @license For the full copyright and license information, see the LICENSE file distributed with this source code.
+# ══════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════
+# 1. ENVIRONMENT SETUP
+# ══════════════════════════════════════════════════════════════════════════
+
+# Determine the project root (3 levels above .git/hooks)
+PROJECT_ROOT=$(php -r "echo dirname(dirname(dirname(realpath('$0'))));")
+VENDOR_BIN="$PROJECT_ROOT/vendor/bin"
+# Path to your package inside the project's vendor folder
+PACKAGE_CONFIG="$PROJECT_ROOT/vendor/cihispano/git-hooks"
+export XDEBUG_MODE=off
+PHP_XDEBUG_FLAGS="-d xdebug.mode=off -d xdebug.log="
+
+# Get staged PHP files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR HEAD | grep "\\.php$")
+
+echo ""
+echo -e "\033[0;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+echo -e "\033[1;36m   CiHispano: Running Centralized Quality Checks          \033[0m"
+echo -e "\033[0;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+
+if [ -z "$STAGED_FILES" ]; then
+    echo -e "  \033[0;33m⚠ No PHP files staged for commit.\033[0m"
+    echo ""
+    exit 0
+fi
+
+cd "$PROJECT_ROOT"
+
+# ══════════════════════════════════════════════════════════════════════════
+# 1. PHP LINT (Syntax Check)
+# ══════════════════════════════════════════════════════════════════════════
+echo -e "\033[1;34m  [1/4] Checking PHP syntax...\033[0m"
+for FILE in $STAGED_FILES; do
+    if [ -f "$FILE" ]; then
+        php $PHP_XDEBUG_FLAGS -l -d display_errors=0 "$FILE" > /dev/null 2>&1
+        if [ $? != 0 ]; then
+            echo -e "  \033[0;31m✘ Syntax error in: $FILE\033[0m"
+            php $PHP_XDEBUG_FLAGS -l "$FILE"
+            exit 1
+        fi
+    fi
+done
+echo -e "  \033[0;32m✔ Syntax is valid\033[0m"
+
+# ══════════════════════════════════════════════════════════════════════════
+# 2. PHP CS FIXER
+# ══════════════════════════════════════════════════════════════════════════
+if [ -f "$VENDOR_BIN/php-cs-fixer" ]; then
+    echo -e "\033[1;34m  [2/4] Validating code style...\033[0m"
+
+    # Priority: Project root .php-cs-fixer.php > .php-cs-fixer.dist.php > Package central config
+    CS_CONFIG=".php-cs-fixer.php"
+    [ ! -f "$CS_CONFIG" ] && CS_CONFIG=".php-cs-fixer.dist.php"
+    [ ! -f "$CS_CONFIG" ] && CS_CONFIG="$PACKAGE_CONFIG/.php-cs-fixer.dist.php"
+
+    php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/php-cs-fixer" fix --config="$CS_CONFIG" --dry-run --diff --ansi $STAGED_FILES
+
+    if [ $? != 0 ]; then
+        echo -e "  \033[0;31m✘ Style violations found.\033[0m"
+        exit 1
+    fi
+    echo -e "  \033[0;32m✔ Coding style verified\033[0m"
+fi
+
+# ══════════════════════════════════════════════════════════════════════════
+# 3. PHP CODE SNIFFER
+# ══════════════════════════════════════════════════════════════════════════
+if [ -f "$VENDOR_BIN/phpcs" ]; then
+    echo -e "\033[1;34m  [3/4] Sniffing code standards...\033[0m"
+
+    # Priority: Project root phpcs.xml > phpcs.xml.dist > Package central config
+    PHPCS_CONFIG="phpcs.xml"
+    [ ! -f "$PHPCS_CONFIG" ] && PHPCS_CONFIG="phpcs.xml.dist"
+    [ ! -f "$PHPCS_CONFIG" ] && PHPCS_CONFIG="$PACKAGE_CONFIG/phpcs.xml.dist"
+
+    php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/phpcs" --standard="$PHPCS_CONFIG" --colors $STAGED_FILES
+
+    if [ $? != 0 ]; then
+        echo -e "  \033[0;31m✘ Standard violations detected.\033[0m"
+        exit 1
+    fi
+    echo -e "  \033[0;32m✔ Standards check passed\033[0m"
+fi
+
+# ══════════════════════════════════════════════════════════════════════════
+# 4. PHPSTAN
+# ══════════════════════════════════════════════════════════════════════════
+if [ -f "$VENDOR_BIN/phpstan" ]; then
+    echo -e "\033[1;34m  [4/4] Running static analysis...\033[0m"
+
+    # Priority: Project root phpstan.neon > phpstan.neon.dist > Package central config
+    STAN_CONFIG="phpstan.neon"
+    [ ! -f "$STAN_CONFIG" ] && STAN_CONFIG="phpstan.neon.dist"
+    [ ! -f "$STAN_CONFIG" ] && STAN_CONFIG="$PACKAGE_CONFIG/phpstan.neon.dist"
+
+    php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/phpstan" analyse -c "$STAN_CONFIG" --no-progress --ansi $STAGED_FILES
+
+    if [ $? != 0 ]; then
+        echo -e "  \033[0;31m✘ PHPStan found logic or type errors.\033[0m"
+        exit 1
+    fi
+    echo -e "  \033[0;32m✔ Static analysis completed\033[0m"
+fi
+
+echo ""
+echo -e "\033[0;32m  ✔ All checks passed! Proceeding with commit.\033[0m"
+echo ""
+exit 0
