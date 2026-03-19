@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
- * Copyright (c) 2025.
+ * Copyright (c) 2026.
  * This file is part of CiHispano Git Hooks library.
  *
  * @copyright CiHispano <administracion@cihispano.org>
@@ -44,7 +44,7 @@ $config
         '@PhpCsFixer:risky' => true,
 
         'header_comment' => [
-            'header' => "Copyright (c) 2025.\nThis file is part of CiHispano Git Hooks library.\n\n@copyright CiHispano <administracion@cihispano.org>\n@license For the full copyright and license information, see the LICENSE file distributed with this source code.",
+            'header' => "Copyright (c) 2026.\nThis file is part of CiHispano Git Hooks library.\n\n@copyright CiHispano <administracion@cihispano.org>\n@license For the full copyright and license information, see the LICENSE file distributed with this source code.",
             'comment_type' => 'comment',
             'separate' => 'both',
         ],

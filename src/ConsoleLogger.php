@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
- * Copyright (c) 2025.
+ * Copyright (c) 2026.
  * This file is part of CiHispano Git Hooks library.
  *
  * @copyright CiHispano <administracion@cihispano.org>
@@ -31,7 +31,7 @@ final class ConsoleLogger
      */
     public static function error(
         string $message,
-        bool $includeIcon = true
+        bool $includeIcon = true,
     ): void {
         $message = self::escape($message);
 
@@ -54,7 +54,7 @@ final class ConsoleLogger
      */
     public static function info(
         string $message,
-        bool $includeIcon = false
+        bool $includeIcon = false,
     ): void {
         $message = self::escape($message);
 
@@ -76,7 +76,7 @@ final class ConsoleLogger
      */
     public static function success(
         string $message,
-        bool $includeIcon = false
+        bool $includeIcon = false,
     ): void {
         $message = self::escape($message);
 
@@ -98,7 +98,7 @@ final class ConsoleLogger
      */
     public static function warning(
         string $message,
-        bool $includeIcon = false
+        bool $includeIcon = false,
     ): void {
         $message = self::escape($message);
 
@@ -120,7 +120,7 @@ final class ConsoleLogger
      */
     public static function header(
         string $header,
-        string $bgColor
+        string $bgColor,
     ): void {
         $header = self::escape($header);
 
@@ -161,7 +161,7 @@ final class ConsoleLogger
      */
     public static function separator(
         int $length = 50,
-        string $color = 'cyan'
+        string $color = 'cyan',
     ): void {
         $line = \str_repeat('-', $length);
 
@@ -190,7 +190,7 @@ final class ConsoleLogger
     public static function step(
         int $step,
         int $total,
-        string $message
+        string $message,
     ): void {
         $message = self::escape($message);
 
@@ -212,7 +212,7 @@ final class ConsoleLogger
     public static function listItem(
         string $message,
         string $icon = CliIcons::BULLET,
-        string $color = 'white'
+        string $color = 'white',
     ): void {
         $message = self::escape($message);
 
@@ -253,7 +253,7 @@ final class ConsoleLogger
     public static function panel(
         string $title,
         string $content,
-        string $color = 'cyan'
+        string $color = 'cyan',
     ): void {
         $title = self::escape($title);
 
@@ -293,7 +293,7 @@ final class ConsoleLogger
     private static function renderIcon(
         string $icon,
         string $color,
-        bool $include
+        bool $include,
     ): string {
         return $include
             ? '<span class="text-' . $color . ' mr-2">' . $icon . '</span>'

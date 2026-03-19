@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
- * Copyright (c) 2025.
+ * Copyright (c) 2026.
  * This file is part of CiHispano Git Hooks library.
  *
  * @copyright CiHispano <administracion@cihispano.org>
@@ -63,7 +63,7 @@ final class ComposerScripts
             throw new \RuntimeException(
                 'Failed to install git hooks. Check the errors above.',
                 0,
-                $e
+                $e,
             );
         }
     }
@@ -113,7 +113,7 @@ final class ComposerScripts
             throw new \RuntimeException(
                 'Failed to uninstall git hooks',
                 0,
-                $e
+                $e,
             );
         }
     }
@@ -170,7 +170,7 @@ final class ComposerScripts
 
         if (false === $entries) {
             throw new \RuntimeException(
-                'Failed to read git hooks directory: ' . PathBuilder::normalize($gitHooksDir)
+                'Failed to read git hooks directory: ' . PathBuilder::normalize($gitHooksDir),
             );
         }
 
@@ -182,7 +182,7 @@ final class ComposerScripts
                 return !\str_starts_with($entry, '.')
                     && !\str_ends_with($entry, '.sample')
                     && \is_file($fullPath);
-            }
+            },
         ));
     }
 
@@ -211,7 +211,7 @@ final class ComposerScripts
                 return !\str_starts_with($entry, '.')
                     && \is_file($fullPath)
                     && !\str_contains($entry, '.');
-            }
+            },
         ));
 
         if (empty($hooks)) {
@@ -234,7 +234,7 @@ final class ComposerScripts
             if (!@\mkdir($gitHooksDir, FilePermissions::DIR_DEFAULT, true) && !\is_dir($gitHooksDir)) {
                 throw new \RuntimeException(
                     'Git hooks directory not found and could not be created. '
-                    . "Make sure you are in a git repository: {$gitHooksDir}"
+                    . "Make sure you are in a git repository: {$gitHooksDir}",
                 );
             }
 
@@ -253,7 +253,7 @@ final class ComposerScripts
 
         if (!\is_writable($gitHooksDir)) {
             throw new \RuntimeException(
-                'Git hooks directory is not writable: ' . PathBuilder::normalize($gitHooksDir)
+                'Git hooks directory is not writable: ' . PathBuilder::normalize($gitHooksDir),
             );
         }
     }
@@ -268,7 +268,7 @@ final class ComposerScripts
         ConsoleLogger::step(1, 2, 'Copying hooks to .git/hooks/');
         ConsoleLogger::newLine();
 
-        foreach ($hooks as $index => $hookFile) {
+        foreach ($hooks as $hookFile) {
             self::installSingleHook($hookFile, $basePath);
         }
 
@@ -283,7 +283,7 @@ final class ComposerScripts
      */
     private static function installSingleHook(
         string $fileName,
-        ?string $basePath = null
+        ?string $basePath = null,
     ): void {
         $sourcePath = PathBuilder::join(self::getHooksSourceDir($basePath), $fileName);
         $destPath = PathBuilder::join(self::getGitHooksDir($basePath), $fileName);
@@ -325,7 +325,7 @@ final class ComposerScripts
      */
     private static function removeSingleHook(
         string $hookFile,
-        string $gitHooksDir
+        string $gitHooksDir,
     ): void {
         $hookPath = PathBuilder::join($gitHooksDir, $hookFile);
 
@@ -338,7 +338,7 @@ final class ComposerScripts
         if (!@\unlink($hookPath)) {
             throw new \RuntimeException(
                 "Failed to remove hook: {$hookFile}. "
-                . 'The file might be in use or you lack sufficient permissions.'
+                . 'The file might be in use or you lack sufficient permissions.',
             );
         }
 
@@ -357,13 +357,13 @@ final class ComposerScripts
         $path = PathBuilder::joinMultiple(
             $root,
             Config::SRC_DIR,
-            Config::HOOKS_SOURCE_DIR
+            Config::HOOKS_SOURCE_DIR,
         );
 
         if (!\is_dir($path)) {
             throw new \RuntimeException(
                 "Hooks source directory does not exist: {$path}. "
-                . 'Check if the library structure is correct.'
+                . 'Check if the library structure is correct.',
             );
         }
 
@@ -379,9 +379,11 @@ final class ComposerScripts
      */
     private static function getGitHooksDir(?string $basePath = null): string
     {
-        $detectedPath = PathBuilder::getHooksPath();
-        if (null !== $detectedPath) {
-            return $detectedPath;
+        if (null === $basePath) {
+            $detectedPath = PathBuilder::getHooksPath();
+            if (null !== $detectedPath) {
+                return $detectedPath;
+            }
         }
 
         $root = $basePath ?? \getcwd();
@@ -422,8 +424,8 @@ final class ComposerScripts
             throw new \RuntimeException(
                 \sprintf(
                     'Failed to create build directory at "%s". Check permissions or filesystem state.',
-                    $buildPath
-                )
+                    $buildPath,
+                ),
             );
         }
     }

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
- * Copyright (c) 2025.
+ * Copyright (c) 2026.
  * This file is part of CiHispano Git Hooks library.
  *
  * @copyright CiHispano <administracion@cihispano.org>
@@ -27,6 +27,19 @@ namespace CiHispano\Util;
 final class FilePermissions
 {
     /**
+     * Directory permission: No access.
+     *
+     * Permission: --------- (0000)
+     * - Owner: no access
+     * - Group: no access
+     * - Others: no access
+     *
+     * Use case: Extreme restriction scenarios, mainly useful in tests that
+     * simulate unreadable or inaccessible directories.
+     */
+    public const int DIR_NO_ACCESS = 0o000;
+
+    /**
      * Directory permission: Read-only access.
      *
      * Permission: r-xr-xr-x (0555)
@@ -37,7 +50,7 @@ final class FilePermissions
      * Use case: Directories where no one should create, delete, or modify files.
      * Note: Without write permission, files cannot be created or deleted in this directory.
      */
-    public const DIR_READ_ONLY = 0o555;
+    public const int DIR_READ_ONLY = 0o555;
 
     /**
      * Directory permission: Private access.
@@ -50,7 +63,7 @@ final class FilePermissions
      * Use case: Sensitive directories where only the owner should have access.
      * Examples: User's private data, configuration directories, cache directories.
      */
-    public const DIR_PRIVATE = 0o700;
+    public const int DIR_PRIVATE = 0o700;
 
     /**
      * Directory permission: Default/Standard access.
@@ -63,7 +76,7 @@ final class FilePermissions
      * Use case: Most common directory permission for general use.
      * Examples: Application directories, public directories, hook directories.
      */
-    public const DIR_DEFAULT = 0o755;
+    public const int DIR_DEFAULT = 0o755;
 
     /**
      * Directory permission: Shared writable access.
@@ -76,7 +89,20 @@ final class FilePermissions
      * Use case: Collaborative directories where group members need to create/modify files.
      * Examples: Shared project directories, team workspaces, upload directories.
      */
-    public const DIR_SHARED_WRITABLE = 0o775;
+    public const int DIR_SHARED_WRITABLE = 0o775;
+
+    /**
+     * Directory permission: World writable access.
+     *
+     * Permission: rwxrwxrwx (0777)
+     * - Owner: read + write + execute (full access)
+     * - Group: read + write + execute (full access)
+     * - Others: read + write + execute (full access)
+     *
+     * Use case: Temporary test fixtures or permissive development directories.
+     * Avoid in production unless you explicitly need unrestricted access.
+     */
+    public const int DIR_WORLD_WRITABLE = 0o777;
 
     /**
      * File permission: Private file.
@@ -89,7 +115,7 @@ final class FilePermissions
      * Use case: Sensitive files that only the owner should access.
      * Examples: Configuration files with credentials, private keys, tokens.
      */
-    public const FILE_PRIVATE = 0o600;
+    public const int FILE_PRIVATE = 0o600;
 
     /**
      * File permission: Shared readable file.
@@ -102,7 +128,7 @@ final class FilePermissions
      * Use case: Standard file permission for general files.
      * Examples: Documentation, public configuration files, logs.
      */
-    public const FILE_SHARED_READ = 0o644;
+    public const int FILE_SHARED_READ = 0o644;
 
     /**
      * File permission: Executable file.
@@ -115,7 +141,7 @@ final class FilePermissions
      * Use case: Scripts, binaries, and executable files.
      * Examples: Shell scripts, Git hooks, CLI tools, binaries.
      */
-    public const FILE_EXECUTABLE = 0o755;
+    public const int FILE_EXECUTABLE = 0o755;
 
     /**
      * File permission: Read-only file.
@@ -128,7 +154,7 @@ final class FilePermissions
      * Use case: Files that should never be modified.
      * Examples: Read-only configuration, immutable data files.
      */
-    public const FILE_READ_ONLY = 0o444;
+    public const int FILE_READ_ONLY = 0o444;
 
     /**
      * Private constructor to prevent instantiation.

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /*
- * Copyright (c) 2025.
+ * Copyright (c) 2026.
  * This file is part of CiHispano Git Hooks library.
  *
  * @copyright CiHispano <administracion@cihispano.org>
@@ -11,6 +11,8 @@ declare(strict_types=1);
  */
 
 namespace CiHispano\Util;
+
+use CiHispano\Config;
 
 /**
  * FileComparator.
@@ -20,9 +22,13 @@ namespace CiHispano\Util;
 final class FileComparator
 {
     /**
-     * Default hash algorithm to use.
+     * Private constructor prevents instantiation.
+     *
+     * This class should only be used for its constants.
      */
-    private const DEFAULT_ALGORITHM = 'sha256';
+    private function __construct()
+    {
+    }
 
     /**
      * Check if two files are identical by comparing their hashes.
@@ -38,7 +44,7 @@ final class FileComparator
     public static function areIdentical(
         string $file1,
         string $file2,
-        string $algorithm = self::DEFAULT_ALGORITHM
+        string $algorithm = Config::DEFAULT_ALGORITHM,
     ): bool {
         $hash1 = self::getHash($file1, $algorithm);
         $hash2 = self::getHash($file2, $algorithm);
@@ -58,7 +64,7 @@ final class FileComparator
      */
     public static function getHash(
         string $file,
-        string $algorithm = self::DEFAULT_ALGORITHM
+        string $algorithm = Config::DEFAULT_ALGORITHM,
     ): string {
         if (!\file_exists($file)) {
             throw new \RuntimeException("File not found: {$file}");
@@ -72,7 +78,7 @@ final class FileComparator
 
         if (false === $hash) {
             throw new \RuntimeException(
-                "Failed to calculate {$algorithm} hash for: {$file}"
+                "Failed to calculate {$algorithm} hash for: {$file}",
             );
         }
 
@@ -93,7 +99,7 @@ final class FileComparator
     public static function matchesHash(
         string $file,
         string $expectedHash,
-        string $algorithm = self::DEFAULT_ALGORITHM
+        string $algorithm = Config::DEFAULT_ALGORITHM,
     ): bool {
         $currentHash = self::getHash($file, $algorithm);
 
@@ -113,11 +119,11 @@ final class FileComparator
      */
     public static function areAllIdentical(
         array $files,
-        string $algorithm = self::DEFAULT_ALGORITHM
+        string $algorithm = Config::DEFAULT_ALGORITHM,
     ): bool {
         if (\count($files) < 2) {
             throw new \InvalidArgumentException(
-                'At least 2 files required for comparison'
+                'At least 2 files required for comparison',
             );
         }
 
