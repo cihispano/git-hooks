@@ -72,7 +72,7 @@ final class ComposerScriptsTest extends TestCase
     public function testInstallKeepsExistingIdenticalHookContent(): void
     {
         $projectRoot = $this->createProjectStructure();
-        $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . '.git' . \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR;
+        $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
         self::assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
 
@@ -91,7 +91,7 @@ final class ComposerScriptsTest extends TestCase
     public function testInstallOverwritesDifferentExistingHook(): void
     {
         $projectRoot = $this->createProjectStructure();
-        $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . '.git' . \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR;
+        $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
         self::assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
 
@@ -346,7 +346,7 @@ final class ComposerScriptsTest extends TestCase
 
     public function testPrivateRemoveSingleHookSkipsMissingFiles(): void
     {
-        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . '.git' . \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR;
+        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
         self::assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
 
@@ -358,7 +358,7 @@ final class ComposerScriptsTest extends TestCase
     public function testPrivateInstallSingleHookThrowsWhenSourceFileIsMissing(): void
     {
         $projectRoot = $this->createProjectStructure();
-        $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . '.git' . \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR;
+        $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
         self::assertTrue(\mkdir($hooksDir, FilePermissions::DIR_WORLD_WRITABLE, true));
 
@@ -393,7 +393,7 @@ final class ComposerScriptsTest extends TestCase
 
     public function testPrivateRemoveSingleHookThrowsWhenUnlinkFails(): void
     {
-        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . '.git' . \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR;
+        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
         self::assertTrue(
             \mkdir($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit', FilePermissions::DIR_DEFAULT, true),
