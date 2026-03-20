@@ -21,3 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created .php-cs-fixer.dist.php file
 - Created phpunit.xml.dist file
 - Created phpstan.neon.dist file
+- Added PHPUnit as a development dependency
+- Added unit tests for core classes and utility helpers
+- Added Composer scripts for `test` and `test:coverage`
+
+### Changed
+
+- Updated the documented QA workflow to include PHPUnit
+- Renamed style-fix scripts to the `cs:fix` and `sniff:fix` convention

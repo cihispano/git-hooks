@@ -71,7 +71,7 @@ Before pushing, the `pre-push` hook runs a full-project validation:
 1. ✅ PHPUnit, if available in the target project
 2. ✅ Full PHPStan analysis
 
-This repository does not currently ship its own automated test suite. However, the installed `pre-push` hook is designed for consumer projects and will run PHPUnit there when it is available. If PHPUnit is not installed in the target project, the hook skips that step and continues with the remaining checks.
+This repository ships its own PHPUnit suite for the package itself. The installed `pre-push` hook is also designed for consumer projects and will run PHPUnit there when it is available. If PHPUnit is not installed in the target project, the hook skips that step and continues with the remaining checks.
 
 ### Example Output
 
@@ -111,7 +111,7 @@ Fix the issues and try again:
 
 ```bash
 # Fix code style automatically
-composer cs-fix
+composer cs:fix
 
 # Stage the fixed files
 git add .
@@ -153,9 +153,19 @@ This package provides the following Composer scripts:
     "scripts": {
         "install-hooks": "CiHispano\\ComposerScripts::install",
         "uninstall-hooks": "CiHispano\\ComposerScripts::uninstall",
-        "analyze": "phpstan analyze --verbose",
-        "sniff": "phpcs",
-        "cs": "vendor/bin/php-cs-fixer fix --ansi --verbose --dry-run --diff"
+        "analyze": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/phpstan analyze --verbose",
+        "check:all": [
+            "@analyze",
+            "@sniff",
+            "@cs",
+            "@test"
+        ],
+        "cs": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/php-cs-fixer fix --ansi --verbose --dry-run --diff",
+        "cs:fix": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/php-cs-fixer fix --ansi --verbose --diff",
+        "sniff": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/phpcs",
+        "sniff:fix": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/phpcbf",
+        "test": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/phpunit --configuration phpunit.xml.dist --colors=always",
+        "test:coverage": "@php -d xdebug.mode=coverage -d xdebug.start_with_request=yes vendor/bin/phpunit --configuration phpunit.xml.dist --colors=always --coverage-text --coverage-html build/coverage"
     }
 }
 ```
@@ -166,8 +176,13 @@ Add these to your `composer.json` to access them easily:
 composer install-hooks
 composer uninstall-hooks
 composer analyze
+composer check:all
 composer sniff
 composer cs
+composer cs:fix
+composer sniff:fix
+composer test
+composer test:coverage
 ```
 
 ## 🔧 Integration with Existing Projects
@@ -238,18 +253,23 @@ composer check:all
 composer analyze
 composer sniff
 composer cs
+composer test
 
 # Fix code style
-composer cs-fix
+composer cs:fix
+
+# Generate coverage locally
+composer test:coverage
 ```
 
-### Test Suite Status
-
-The automated test suite for this package was intentionally moved to a separate task and is not part of the current repository state. The package itself is currently maintained through static analysis and style checks, while the installed hooks still support running PHPUnit inside consumer projects when available. At the moment, the maintained quality gates for this repository are:
+### Test Suite
 
 - `composer analyze`
 - `composer sniff`
 - `composer cs`
+- `composer test`
+
+For a full local validation pass, run `composer check:all`. If you want an HTML coverage report, run `composer test:coverage` and open the generated files under `build/coverage/`.
 
 ## 📝 Changelog
 
