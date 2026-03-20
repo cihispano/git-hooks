@@ -18,7 +18,7 @@ This guide explains how to work on the package locally, run validations, underst
 - `src/Util/`: reusable utility classes
 - `tests/`: PHPUnit test suite
 - `docs/`: package documentation
-- `.github/workflows/`: CI workflows
+- `.github/workflows/`: CI workflow definitions used by this repository
 
 ## Local Setup
 
@@ -51,7 +51,7 @@ This repository follows a simple task-based flow around `main`:
 2. Create a dedicated branch for your task or fix.
 3. Make focused changes in that branch only.
 4. Run the required validations locally.
-5. Open a pull request targeting `main`.
+5. Open a pull request or merge request targeting `main`.
 6. Merge only after review and successful CI.
 
 Do not work directly on `main` for feature work, fixes, or documentation changes.
@@ -75,11 +75,11 @@ When your work is ready:
 
 ```bash
 git add .
-git commit -m "type(scope): short description"
+git commit -S -m "type(scope): short description"
 git push -u origin feature/your-task-name
 ```
 
-Then open a pull request to `main`.
+Then open a pull request or merge request to `main`.
 
 ## Validation Workflow
 
@@ -94,7 +94,7 @@ Use these commands while working on changes:
 - `composer test:coverage`: generate coverage output under `build/coverage/`
 - `composer check:all`: run the main local quality gates in sequence
 
-Before opening a pull request, run:
+Before opening a pull request or merge request, run:
 
 ```bash
 composer check:all
@@ -117,13 +117,13 @@ This package installs three Git hooks into the consumer repository:
 When developing this package itself, you can reinstall the packaged hooks with:
 
 ```bash
-composer run-script install-hooks
+composer install-hooks
 ```
 
 To remove them:
 
 ```bash
-composer run-script uninstall-hooks
+composer uninstall-hooks
 ```
 
 Commit messages should follow Conventional Commits. See `docs/CONVENTIONAL_COMMITS.md` for the expected format and examples.
@@ -142,7 +142,7 @@ The current PHPUnit suite lives under `tests/Unit/` and mirrors the package stru
 
 ## Continuous Integration
 
-GitHub Actions is used to validate the package on pushes and pull requests. CI should mirror the same main checks used locally:
+This repository currently uses GitHub Actions to validate the package on pushes and pull requests, but the same branching and validation flow also maps cleanly to GitLab with merge requests and GitLab CI/CD. CI should mirror the same main checks used locally:
 
 - Composer validation
 - static analysis
@@ -150,7 +150,7 @@ GitHub Actions is used to validate the package on pushes and pull requests. CI s
 - formatting checks
 - automated tests
 
-Keeping local commands and CI aligned helps avoid surprises when opening a pull request.
+Keeping local commands and CI aligned helps avoid surprises when opening a pull request or merge request.
 
 ## Contribution Expectations
 
@@ -162,9 +162,9 @@ Keeping local commands and CI aligned helps avoid surprises when opening a pull 
 
 If you modify scripts, package configuration, or developer tooling, make sure the README and contributor-facing docs stay accurate.
 
-## Pull Requests
+## Pull Requests And Merge Requests
 
-Before submitting a pull request:
+Before submitting a pull request or merge request:
 
 1. Install dependencies with `composer install`.
 2. Run `composer check:all`.

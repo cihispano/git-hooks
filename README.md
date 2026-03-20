@@ -38,7 +38,7 @@ The hooks will be installed automatically after installation.
 If you need to reinstall the hooks:
 
 ```bash
-composer run-script install-hooks
+composer install-hooks
 ```
 
 ## 🚀 Usage
@@ -117,7 +117,7 @@ composer cs:fix
 git add .
 
 # Try committing again
-git commit -m "Your message"
+git commit -S -m "Your message"
 ```
 
 ## 🛠️ Configuration
@@ -137,7 +137,7 @@ git commit --no-verify -m "Emergency fix"
 To remove the Git hooks:
 
 ```bash
-composer run-script uninstall-hooks
+composer uninstall-hooks
 ```
 
 ### Customizing the Hooks
@@ -234,7 +234,7 @@ return (new Config())
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to submit a pull request or merge request.
 
 ### Development Setup
 
