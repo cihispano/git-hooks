@@ -1,35 +1,55 @@
-image: php:8.4-cli
-
 stages:
   - validate
-  - qa
+  - quality
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 variables:
+  COMPOSER_ALLOW_SUPERUSER: "1"
+  COMPOSER_NO_INTERACTION: "1"
   COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/.composer-cache"
 
-cache:
-  key: ${CI_COMMIT_REF_SLUG}
-  paths:
-    - vendor/
-    - .composer-cache/
-
-before_script:
-  - apt-get update
-  - apt-get install -y git unzip libzip-dev
-  - docker-php-ext-install zip
-  - php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
-  - php composer-setup.php --install-dir=/usr/local/bin --filename=composer
-  - composer install --no-interaction --no-progress --prefer-dist
+.setup_php:
+  before_script:
+    - apt-get update
+    - apt-get install -y git unzip libonig-dev libxml2-dev
+    - docker-php-ext-install mbstring dom xml xmlwriter
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer --version
+    - php --version
+    - composer validate --strict
+    - composer install --prefer-dist --no-progress
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - .composer-cache/
+      - vendor/
 
 validate:composer:
   stage: validate
+  image: php:8.1-cli
+  extends: .setup_php
   script:
     - composer validate --strict
 
-qa:package:
-  stage: qa
+quality:matrix:
+  stage: quality
+  extends: .setup_php
+  image: php:${PHP_VERSION}-cli
+  parallel:
+    matrix:
+      - PHP_VERSION: ["8.1", "8.2", "8.3", "8.4"]
   script:
+    - composer test
     - composer analyze
+
+coding-style:php8.1:
+  stage: quality
+  image: php:8.1-cli
+  extends: .setup_php
+  script:
     - composer sniff
     - composer cs
-    - composer test

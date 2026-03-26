@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Expanded runtime compatibility to PHP 8.1 through 8.4.
+- Aligned Composer dependency constraints for cross-version support (Termwind 1.x, PHPUnit 10.x, PHPStan 1.x).
+- Updated local and CI compatibility policy to resolve dependencies with `config.platform.php=8.1.0`.
+- Updated GitHub Actions and GitLab CI to validate tests and static analysis on PHP 8.1, 8.2, 8.3, and 8.4.
+- Kept coding-style checks on PHP 8.1 baseline to avoid version-dependent formatter output.
+- Removed typed class constants to maintain source compatibility with PHP 8.1.
+- Expanded unit-test coverage for utility/config classes, including private empty constructors.
+
 ## [1.0.0] - 2026-03-20
 
 ### Added

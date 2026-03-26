@@ -28,6 +28,12 @@ final class PathBuilderTest extends TestCase
 
         if ($constructor !== null) {
             self::assertFalse($constructor->isPublic(), 'Constructor should not be public if it exists');
+
+            $instance = $reflection->newInstanceWithoutConstructor();
+            $constructor->setAccessible(true);
+            $constructor->invoke($instance);
+
+            self::assertInstanceOf(PathBuilder::class, $instance);
         }
     }
 
