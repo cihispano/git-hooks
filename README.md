@@ -19,9 +19,17 @@ Automated Git Hooks for CodeIgniter 4 projects. This package ensures your code m
 
 ## 📋 Requirements
 
-- **PHP 8.4** or higher
+- **PHP 8.1** to **8.4**
 - **Git 2.0** or higher
 - **Composer 2.0** or higher
+
+## Compatibility policy
+
+- Runtime compatibility: the package is supported on PHP 8.1 through 8.4.
+- Development dependency resolution: `composer.lock` is generated with `config.platform.php=8.1.0`.
+- CI validation: tests and static analysis run on PHP 8.1, 8.2, 8.3, and 8.4 in both GitHub Actions and GitLab CI.
+- Coding style checks (`composer sniff` and `composer cs`) run on PHP 8.1 to keep formatter and sniffer output aligned with the minimum supported runtime.
+- When running `composer cs` on PHP newer than 8.1, PHP CS Fixer may show a warning. This is expected; use PHP 8.1 locally if you want warning-free style checks.
 
 ## 📦 Installation
 
