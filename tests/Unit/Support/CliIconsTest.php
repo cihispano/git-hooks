@@ -77,6 +77,12 @@ final class CliIconsTest extends TestCase
                 $constructor->isPublic(),
                 'Constructor should not be public if it exists',
             );
+
+            $instance = $reflection->newInstanceWithoutConstructor();
+            $constructor->setAccessible(true);
+            $constructor->invoke($instance);
+
+            self::assertInstanceOf(CliIcons::class, $instance);
         }
     }
 
@@ -93,19 +99,13 @@ final class CliIconsTest extends TestCase
         }
     }
 
-    public function testAllConstantsAreTypedAsString(): void
+    public function testAllConstantsContainStringValues(): void
     {
         $reflection = new \ReflectionClass(CliIcons::class);
         $constants = $reflection->getReflectionConstants();
 
         foreach ($constants as $constant) {
-            $type = $constant->getType();
-            self::assertNotNull($type, "Constant {$constant->getName()} should have a type");
-            self::assertSame(
-                'string',
-                (string) $type,
-                "Constant {$constant->getName()} should be typed as string",
-            );
+            self::assertIsString($constant->getValue(), "Constant {$constant->getName()} should be a string");
         }
     }
 

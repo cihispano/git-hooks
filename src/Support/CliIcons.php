@@ -25,49 +25,49 @@ final class CliIcons
      *
      * @var non-empty-string
      */
-    public const string SUCCESS = '✔';
+    public const SUCCESS = '✔';
 
     /**
      * Error/failure indicator.
      *
      * @var non-empty-string
      */
-    public const string ERROR = '✖';
+    public const ERROR = '✖';
 
     /**
      * Warning indicator.
      *
      * @var non-empty-string
      */
-    public const string WARNING = '⚠';
+    public const WARNING = '⚠';
 
     /**
      * Informational indicator.
      *
      * @var non-empty-string
      */
-    public const string INFO = 'ℹ';
+    public const INFO = 'ℹ';
 
     /**
      * Step indicator.
      *
      * @var non-empty-string
      */
-    public const string STEP = '➤';
+    public const STEP = '➤';
 
     /**
      * Question/confirmation indicator.
      *
      * @var non-empty-string
      */
-    public const string ASK = '?';
+    public const ASK = '?';
 
     /**
      * Bullet point for lists.
      *
      * @var non-empty-string
      */
-    public const string BULLET = '•';
+    public const BULLET = '•';
 
     /**
      * Private constructor prevents instantiation.
