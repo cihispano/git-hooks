@@ -129,6 +129,12 @@ final class FilePermissionsTest extends TestCase
                 $constructor->isPublic(),
                 'Constructor should not be public if it exists',
             );
+
+            $instance = $reflection->newInstanceWithoutConstructor();
+            $constructor->setAccessible(true);
+            $constructor->invoke($instance);
+
+            self::assertInstanceOf(FilePermissions::class, $instance);
         }
     }
 

@@ -6,7 +6,7 @@ This guide explains how to work on the package locally, run validations, underst
 
 ## Requirements
 
-- PHP 8.4 or higher
+- PHP 8.1 to 8.4
 - Composer 2
 - Git
 
@@ -45,16 +45,16 @@ composer check:all
 
 ## GitFlow
 
-This repository follows a simple task-based flow around `main`:
+This repository follows a task-based flow around `develop`:
 
-1. Start from an updated `main`.
+1. Start from an updated `develop`.
 2. Create a dedicated branch for your task or fix.
 3. Make focused changes in that branch only.
 4. Run the required validations locally.
-5. Open a pull request or merge request targeting `main`.
+5. Open a pull request or merge request targeting `develop`.
 6. Merge only after review and successful CI.
 
-Do not work directly on `main` for feature work, fixes, or documentation changes.
+Do not work directly on `develop` or `main` for feature work, fixes, or documentation changes.
 
 Recommended branch naming examples:
 
@@ -66,7 +66,7 @@ Recommended branch naming examples:
 Before starting a new branch:
 
 ```bash
-git checkout main
+git checkout develop
 git pull
 git checkout -b feature/your-task-name
 ```
@@ -79,7 +79,7 @@ git commit -S -m "type(scope): short description"
 git push -u origin feature/your-task-name
 ```
 
-Then open a pull request or merge request to `main`.
+Then open a pull request or merge request to `develop`.
 
 ## Validation Workflow
 
@@ -171,6 +171,6 @@ Before submitting a pull request or merge request:
 3. Run `composer test` if your changes affect behavior.
 4. Update docs when commands, hooks, or workflows change.
 5. Use a Conventional Commit message for your branch work.
-6. Confirm your branch targets `main`.
+6. Confirm your branch targets `develop`.
 
 Thank you for helping improve the package.
