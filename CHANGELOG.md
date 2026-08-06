@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added GitLab issue templates (Task/Chore, Feature Request, Bug Report) under `.gitlab/issue_templates/`.
+- Added GitLab merge request template under `.gitlab/merge_request_templates/`.
 
 ### Changed
 
