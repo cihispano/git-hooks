@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Upgraded PHPStan from 1.x to 2.x and set the analysis level to 10.
 - Expanded runtime compatibility to PHP 8.1 through 8.4.
 - Aligned Composer dependency constraints for cross-version support (Termwind 1.x, PHPUnit 10.x, PHPStan 1.x).
 - Updated local and CI compatibility policy to resolve dependencies with `config.platform.php=8.1.0`.
