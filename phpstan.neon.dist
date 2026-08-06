@@ -2,8 +2,8 @@
 # This file is part of CiHispano Git Hooks library.
 
 parameters:
-    # We keep your 'max' level for top-tier code quality
-    level: max
+    # Top-tier code quality: level 10 (PHPStan 2.x)
+    level: 10
 
     paths:
         - src
