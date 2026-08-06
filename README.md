@@ -14,7 +14,7 @@ Automated Git Hooks for CodeIgniter 4 projects. This package ensures your code m
 - 👃 **PHP_CodeSniffer** - Validates PSR-12 compliance and coding standards.
 - 🎨 **PHP CS Fixer** - Automatically formats code to follow defined styles.
 - 🎯 **Smart Scope** - Only analyzes staged files to keep your workflow fast.
-- 🌈 **Termwind Output** - Beautiful, colorful console feedback with icons.
+- 🌈 **Native ANSI Output** - Beautiful, colorful console feedback with icons (respects `NO_COLOR`).
 - 🔧 **Zero Config** - Works out of the box with sensible defaults for CI4.
 
 ## 📋 Requirements

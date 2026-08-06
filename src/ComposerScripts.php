@@ -32,8 +32,6 @@ final class ComposerScripts
      */
     public static function install(mixed $event = null): void
     {
-        self::ensureTermwindLoaded();
-
         $basePath = \is_string($event) ? $event : (\getcwd() ?: '.');
 
         self::ensureBuildDirectory($basePath);
@@ -77,8 +75,6 @@ final class ComposerScripts
      */
     public static function uninstall(mixed $event = null): void
     {
-        self::ensureTermwindLoaded();
-
         $basePath = \is_string($event) ? $event : null;
 
         ConsoleLogger::separator(Config::SEPARATOR_LENGTH, Config::COLOR_ERROR);
@@ -136,19 +132,6 @@ final class ComposerScripts
     public static function postUpdate(): void
     {
         self::install();
-    }
-
-    /**
-     * Ensure Termwind render function is loaded.
-     */
-    private static function ensureTermwindLoaded(): void
-    {
-        if (!\function_exists('Termwind\render')) {
-            $functionsFile = __DIR__ . '/../vendor' . Config::TERMWIND_FUNCTIONS_PATH;
-            if (\file_exists($functionsFile)) {
-                require_once $functionsFile;
-            }
-        }
     }
 
     /**

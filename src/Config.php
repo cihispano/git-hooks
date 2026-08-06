@@ -105,11 +105,6 @@ final class Config
     public const MIN_PHP_VERSION = '8.1.0';
 
     /**
-     * Path to Termwind functions file relative to vendor.
-     */
-    public const TERMWIND_FUNCTIONS_PATH = '/nunomaduro/termwind/src/Functions.php';
-
-    /**
      * Private constructor to prevent instantiation.
      *
      * This class should only be used for its constants.
