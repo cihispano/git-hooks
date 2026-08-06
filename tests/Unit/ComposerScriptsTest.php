@@ -14,18 +14,22 @@ namespace CiHispano\Tests\Unit;
 
 use CiHispano\ComposerScripts;
 use CiHispano\Config;
+use CiHispano\ConsoleLogger;
 use CiHispano\Util\FilePermissions;
 use PHPUnit\Framework\TestCase;
 use org\bovigo\vfs\vfsStream;
 use org\bovigo\vfs\vfsStreamDirectory;
-use Symfony\Component\Console\Output\BufferedOutput;
-use Termwind\Termwind;
 
 final class ComposerScriptsTest extends TestCase
 {
     private string $tempRoot;
 
     private string $originalCwd;
+
+    /**
+     * @var resource
+     */
+    private $output;
 
     protected function setUp(): void
     {
@@ -35,13 +39,15 @@ final class ComposerScriptsTest extends TestCase
 
         self::assertTrue(\mkdir($this->tempRoot, FilePermissions::DIR_DEFAULT, true));
 
-        Termwind::renderUsing(new BufferedOutput());
+        $this->output = \fopen('php://memory', 'r+');
+        ConsoleLogger::setOutputStream($this->output);
     }
 
     protected function tearDown(): void
     {
         \chdir($this->originalCwd);
-        Termwind::renderUsing(null);
+        ConsoleLogger::setOutputStream(null);
+        \fclose($this->output);
         $this->removeDirectory($this->tempRoot);
     }
 
