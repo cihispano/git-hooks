@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added GitLab issue templates (Task/Chore, Feature Request, Bug Report) under `.gitlab/issue_templates/`.
 - Added GitLab merge request template under `.gitlab/merge_request_templates/`.
+- Added `docs/INSTALLATION.md` with install, hook install/uninstall, verification, and emergency skip guidance.
+- Added `docs/CONFIGURATION.md` documenting current behavior: tool config fallbacks, staged-files scope, and commit-msg rules (planned `git-hooks.json` included).
+- Added `docs/MIGRATION.md` with the intended 1.x to 0.1.0 migration steps for consumers.
 
 ### Changed
 
