@@ -14,15 +14,70 @@ namespace CiHispano;
 
 use CiHispano\Support\CliIcons;
 
-use function Termwind\render;
-
 /**
  * ConsoleLogger.
  *
- * Provides styled console output using Termwind for CLI applications
+ * Provides styled console output using native ANSI escape sequences.
+ * Colors are automatically disabled when the output is not a TTY or when
+ * the NO_COLOR environment variable is set.
  */
 final class ConsoleLogger
 {
+    private const RESET = "\033[0m";
+    private const BOLD  = '1';
+
+    /**
+     * ANSI foreground color codes.
+     *
+     * @var array<string, string>
+     */
+    private const FOREGROUND = [
+        'black'   => '30',
+        'red'     => '31',
+        'green'   => '32',
+        'yellow'  => '33',
+        'blue'    => '34',
+        'magenta' => '35',
+        'cyan'    => '36',
+        'white'   => '37',
+    ];
+
+    /**
+     * ANSI background color codes.
+     *
+     * @var array<string, string>
+     */
+    private const BACKGROUND = [
+        'black'   => '40',
+        'red'     => '41',
+        'green'   => '42',
+        'yellow'  => '43',
+        'blue'    => '44',
+        'magenta' => '45',
+        'cyan'    => '46',
+        'white'   => '47',
+    ];
+
+    /**
+     * Output stream override, mainly for tests.
+     *
+     * @var resource|null
+     */
+    private static mixed $stream = null;
+
+    /**
+     * Redirect console output to the given stream.
+     *
+     * Useful in tests: pass a stream resource (e.g. "php://memory") to capture output.
+     * Pass null to restore standard output.
+     *
+     * @param resource|null $stream
+     */
+    public static function setOutputStream(mixed $stream): void
+    {
+        self::$stream = $stream;
+    }
+
     /**
      * Display an error message in the console.
      *
@@ -33,17 +88,11 @@ final class ConsoleLogger
         string $message,
         bool $includeIcon = true,
     ): void {
-        $message = self::escape($message);
-
         $icon = self::renderIcon(CliIcons::ERROR, 'red', $includeIcon);
 
-        render(<<<HTML
-            <div class="mx-1">
-                {$icon}
-                <span class="text-red font-bold mr-1">ERROR:</span>
-                <span class="text-red">{$message}</span>
-            </div>
-        HTML);
+        self::write(
+            ' ' . $icon . self::color('ERROR:', 'red', true) . ' ' . self::color($message, 'red'),
+        );
     }
 
     /**
@@ -56,16 +105,9 @@ final class ConsoleLogger
         string $message,
         bool $includeIcon = false,
     ): void {
-        $message = self::escape($message);
-
         $icon = self::renderIcon(CliIcons::INFO, 'cyan', $includeIcon);
 
-        render(<<<HTML
-            <div class="mx-1">
-                {$icon}
-                <span class="text-cyan">{$message}</span>
-            </div>
-        HTML);
+        self::write(' ' . $icon . self::color($message, 'cyan'));
     }
 
     /**
@@ -78,16 +120,9 @@ final class ConsoleLogger
         string $message,
         bool $includeIcon = false,
     ): void {
-        $message = self::escape($message);
-
         $icon = self::renderIcon(CliIcons::SUCCESS, 'green', $includeIcon);
 
-        render(<<<HTML
-            <div class="mx-1">
-                {$icon}
-                <span class="text-green">{$message}</span>
-            </div>
-        HTML);
+        self::write(' ' . $icon . self::color($message, 'green'));
     }
 
     /**
@@ -100,16 +135,9 @@ final class ConsoleLogger
         string $message,
         bool $includeIcon = false,
     ): void {
-        $message = self::escape($message);
-
         $icon = self::renderIcon(CliIcons::WARNING, 'yellow', $includeIcon);
 
-        render(<<<HTML
-            <div class="mx-1">
-                {$icon}
-                <span class="text-yellow">{$message}</span>
-            </div>
-        HTML);
+        self::write(' ' . $icon . self::color($message, 'yellow'));
     }
 
     /**
@@ -122,15 +150,9 @@ final class ConsoleLogger
         string $header,
         string $bgColor,
     ): void {
-        $header = self::escape($header);
+        $code = self::BACKGROUND[$bgColor] ?? self::BACKGROUND['cyan'];
 
-        render(<<<HTML
-            <div class="mx-1 my-0 w-50 flex justify-center">
-                <div class="my-0 px-2 bg-{$bgColor} text-black font-bold w-full text-center">
-                    {$header}
-                </div>
-            </div>
-        HTML);
+        self::write(' ' . self::paint(" {$header} ", $code, true) . ' ');
     }
 
     /**
@@ -140,17 +162,11 @@ final class ConsoleLogger
      */
     public static function box(string $content): void
     {
-        $content = self::escape($content);
-
         $line = \str_repeat('-', \strlen($content) + 4);
 
-        render(<<<HTML
-            <div class="mx-1 my-1 px-2 py-1">
-                {$line}
-                | {$content} |
-                {$line}
-            </div>
-        HTML);
+        self::write(' ' . $line);
+        self::write(' | ' . $content . ' |');
+        self::write(' ' . $line);
     }
 
     /**
@@ -165,11 +181,7 @@ final class ConsoleLogger
     ): void {
         $line = \str_repeat('-', $length);
 
-        render(<<<HTML
-            <div class="mx-1 my-0">
-                <span class="text-{$color}">{$line}</span>
-            </div>
-        HTML);
+        self::write(' ' . self::color($line, $color));
     }
 
     /**
@@ -177,7 +189,7 @@ final class ConsoleLogger
      */
     public static function newLine(): void
     {
-        render('<br />');
+        self::write('');
     }
 
     /**
@@ -192,14 +204,10 @@ final class ConsoleLogger
         int $total,
         string $message,
     ): void {
-        $message = self::escape($message);
-
-        render(<<<HTML
-            <div class="mx-1">
-                <span class="text-blue font-bold">[{$step}/{$total}]</span>
-                <span class="text-cyan pl-1">{$message}</span>
-            </div>
-        HTML);
+        self::write(
+            ' ' . self::color("[{$step}/{$total}]", 'blue', true)
+            . ' ' . self::color($message, 'cyan'),
+        );
     }
 
     /**
@@ -214,14 +222,7 @@ final class ConsoleLogger
         string $icon = CliIcons::BULLET,
         string $color = 'white',
     ): void {
-        $message = self::escape($message);
-
-        render(<<<HTML
-            <div class="mx-2">
-                <span class="text-{$color}">{$icon}</span>
-                <span class="text-{$color}"> {$message}</span>
-            </div>
-        HTML);
+        self::write('  ' . self::color($icon . ' ' . $message, $color));
     }
 
     /**
@@ -233,14 +234,7 @@ final class ConsoleLogger
     {
         $icon = self::renderIcon(CliIcons::ASK, 'yellow', true);
 
-        $question = self::escape($question);
-
-        render(<<<HTML
-            <div class="mx-1 my-1">
-                <span class="text-yellow font-bold">{$icon}</span>
-                <span class="text-white"> {$question}</span>
-            </div>
-        HTML);
+        self::write(' ' . $icon . self::color(' ' . $question, 'white'));
     }
 
     /**
@@ -255,48 +249,120 @@ final class ConsoleLogger
         string $content,
         string $color = 'cyan',
     ): void {
-        $title = self::escape($title);
+        $border = \str_repeat('─', 24);
 
-        $content = self::escape($content);
-
-        render(<<<HTML
-            <div class="mx-1 my-1">
-                <div class="text-{$color}">────────────────────────</div>
-                <div class="font-bold text-{$color}">{$title}</div>
-                <div class="mt-1 text-white">{$content}</div>
-                <div class="text-{$color}">────────────────────────</div>
-            </div>
-        HTML);
-    }
-
-    /**
-     * Escape HTML special characters to prevent formatting issues.
-     *
-     * @param string $text The text to escape
-     *
-     * @return string The escaped text safe for HTML output
-     */
-    private static function escape(string $text): string
-    {
-        return \htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        self::write(' ' . self::color($border, $color));
+        self::write(' ' . self::color($title, $color, true));
+        self::write(' ' . $content);
+        self::write(' ' . self::color($border, $color));
     }
 
     /**
      * Render an icon with the specified color.
      *
      * @param string $icon    The icon constant from CliIcons
-     * @param string $color   The color class for the icon (red, cyan, green, yellow, etc.)
+     * @param string $color   The color name (red, cyan, green, yellow, etc.)
      * @param bool   $include Whether to include the icon
      *
-     * @return string The rendered icon HTML or empty string
+     * @return string The rendered icon or empty string
      */
     private static function renderIcon(
         string $icon,
         string $color,
         bool $include,
     ): string {
-        return $include
-            ? '<span class="text-' . $color . ' mr-2">' . $icon . '</span>'
-            : '';
+        if (! $include) {
+            return '';
+        }
+
+        return self::color($icon . ' ', $color);
+    }
+
+    /**
+     * Apply a background color (and optional bold) to a text segment.
+     *
+     * @param string $text The text to paint
+     * @param string $code The ANSI background color code
+     * @param bool   $bold Whether to apply bold
+     *
+     * @return string The painted text (plain when colors are disabled)
+     */
+    private static function paint(
+        string $text,
+        string $code,
+        bool $bold = false,
+    ): string {
+        if (! self::supportsColor()) {
+            return $text;
+        }
+
+        $modifiers = [$code];
+
+        if ($bold) {
+            $modifiers[] = self::BOLD;
+        }
+
+        return "\033[" . \implode(';', $modifiers) . "m{$text}" . self::RESET;
+    }
+
+    /**
+     * Apply ANSI color to a text segment.
+     *
+     * @param string $text The text to colorize
+     * @param string $name The color name (see FOREGROUND map)
+     * @param bool   $bold Whether to apply bold
+     *
+     * @return string The colorized text (plain when colors are disabled)
+     */
+    private static function color(
+        string $text,
+        string $name,
+        bool $bold = false,
+    ): string {
+        if (! self::supportsColor()) {
+            return $text;
+        }
+
+        $code      = self::FOREGROUND[$name] ?? self::FOREGROUND['white'];
+        $modifiers = [$code];
+
+        if ($bold) {
+            $modifiers[] = self::BOLD;
+        }
+
+        return "\033[" . \implode(';', $modifiers) . "m{$text}" . self::RESET;
+    }
+
+    /**
+     * Write a line to standard output.
+     */
+    private static function write(string $line): void
+    {
+        if (null !== self::$stream) {
+            \fwrite(self::$stream, $line . PHP_EOL);
+
+            return;
+        }
+
+        echo $line . PHP_EOL;
+    }
+
+    /**
+     * Whether the current stream supports ANSI colors.
+     *
+     * Colors are disabled when NO_COLOR is set (regardless of value),
+     * when the TERM is "dumb", or when STDOUT is not a TTY.
+     */
+    private static function supportsColor(): bool
+    {
+        if (false !== \getenv('NO_COLOR')) {
+            return false;
+        }
+
+        if ('dumb' === \getenv('TERM')) {
+            return false;
+        }
+
+        return ! (! \defined('STDOUT') || ! \stream_isatty(STDOUT));
     }
 }

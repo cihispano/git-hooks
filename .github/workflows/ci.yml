@@ -55,6 +55,26 @@ jobs:
       - name: Run test suite
         run: composer test
 
+      - name: Run hook smoke tests (must not skip)
+        run: vendor/bin/phpunit --configuration phpunit.xml.dist --no-coverage --fail-on-skipped tests/Unit/HooksSmokeTest.php
+
+  hooks:
+    name: Shell hooks (shellcheck)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check shell syntax
+        run: |
+          for hook in src/Hooks/*; do
+            sh -n "$hook"
+          done
+
+      - name: Run shellcheck
+        run: shellcheck --severity=error src/Hooks/pre-commit src/Hooks/pre-push src/Hooks/commit-msg
+
   coding-style:
     name: Coding style (PHP 8.1 baseline)
     runs-on: ubuntu-latest

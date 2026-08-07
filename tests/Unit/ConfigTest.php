@@ -32,7 +32,6 @@ final class ConfigTest extends TestCase
         self::assertIsString(Config::COLOR_INFO);
         self::assertIsInt(Config::MAX_HOOK_FILE_SIZE);
         self::assertIsString(Config::MIN_PHP_VERSION);
-        self::assertIsString(Config::TERMWIND_FUNCTIONS_PATH);
     }
 
     public function testConfigConstantsHaveExpectedValues(): void
@@ -49,7 +48,6 @@ final class ConfigTest extends TestCase
         self::assertSame('cyan', Config::COLOR_INFO);
         self::assertSame(1048576, Config::MAX_HOOK_FILE_SIZE);
         self::assertSame('8.1.0', Config::MIN_PHP_VERSION);
-        self::assertSame('/nunomaduro/termwind/src/Functions.php', Config::TERMWIND_FUNCTIONS_PATH);
     }
 
     public function testDefaultHooksContainExpectedHookNames(): void

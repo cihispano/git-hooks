@@ -25,12 +25,16 @@ final class Config
     public const DEFAULT_ALGORITHM = 'sha256';
 
     /**
-     * Git hooks directory relative path.
+     * Legacy default Git hooks directory relative path.
+     *
+     * Retained for reference and backwards compatibility. Runtime resolution
+     * is git-first via GitRepository::resolveHooksDir(), so the effective
+     * directory may differ (worktrees, core.hooksPath, submodules).
      */
     public const GIT_HOOKS_DIR = '.git' . \DIRECTORY_SEPARATOR . 'hooks';
 
     /**
-     * Build directory name.
+     * Build directory name (QA cache artifacts).
      */
     public const BUILD_DIR = 'build';
 
@@ -47,7 +51,9 @@ final class Config
     /**
      * Default hook files available for installation.
      *
-     * @var array<string>
+     * Informative reference matching the hooks shipped in src/Hooks.
+     *
+     * @var list<string>
      */
     public const DEFAULT_HOOKS = [
         'pre-commit',
@@ -58,7 +64,10 @@ final class Config
     /**
      * File extensions to exclude from hook installation.
      *
-     * @var array<string>
+     * Reserved for future filtering logic; the current installer ignores
+     * dotfiles and any entry containing a dot.
+     *
+     * @var list<string>
      */
     public const EXCLUDED_EXTENSIONS = [
         '.sample',
@@ -96,18 +105,17 @@ final class Config
      * Maximum allowed hook file size in bytes.
      *
      * Default: 1MB
+     *
+     * Reserved for future size validation; not enforced by the current installer.
      */
     public const MAX_HOOK_FILE_SIZE = 1048576;
 
     /**
      * Minimum PHP version required.
+     *
+     * Informative reference matching the composer.json constraint.
      */
     public const MIN_PHP_VERSION = '8.1.0';
-
-    /**
-     * Path to Termwind functions file relative to vendor.
-     */
-    public const TERMWIND_FUNCTIONS_PATH = '/nunomaduro/termwind/src/Functions.php';
 
     /**
      * Private constructor to prevent instantiation.

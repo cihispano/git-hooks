@@ -11,55 +11,55 @@
 # 1. Access the commit message
 COMMIT_MSG_FILE=$1
 COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
-FIRST_LINE=$(echo "$COMMIT_MSG" | head -n1)
+FIRST_LINE=$(printf '%s\n' "$COMMIT_MSG" | sed -n '1p')
 
 # 2. Define Regex and Constants (Conventional Commits v1.0.0)
 REG_CONVENTIONAL="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?!?: .{1,}"
 MIN_LENGTH=10
 MAX_LENGTH=100
 
-echo ""
-echo -e "\033[0;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e "\033[1;36m   CiHispano: Validating Commit Message Style             \033[0m"
-echo -e "\033[0;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+printf '\n'
+printf '\033[0;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n'
+printf '\033[1;36m   CiHispano: Validating Commit Message Style             \033[0m\n'
+printf '\033[0;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n'
 
 # ══════════════════════════════════════════════════════════════════════════
 # 1. LENGTH VALIDATIONS
 # ══════════════════════════════════════════════════════════════════════════
 MSG_LENGTH=${#FIRST_LINE}
 
-if [ $MSG_LENGTH -lt $MIN_LENGTH ]; then
-    echo -e "  \033[0;31m✘ Message is too short ($MSG_LENGTH/$MIN_LENGTH chars min)\033[0m"
+if [ "$MSG_LENGTH" -lt "$MIN_LENGTH" ]; then
+    printf '\033[0;31m✘ Message is too short (%s/%s chars min)\033[0m\n' "$MSG_LENGTH" "$MIN_LENGTH"
     exit 1
 fi
 
-if [ $MSG_LENGTH -gt $MAX_LENGTH ]; then
-    echo -e "  \033[0;31m✘ Message is too long ($MSG_LENGTH/$MAX_LENGTH chars max)\033[0m"
+if [ "$MSG_LENGTH" -gt "$MAX_LENGTH" ]; then
+    printf '\033[0;31m✘ Message is too long (%s/%s chars max)\033[0m\n' "$MSG_LENGTH" "$MAX_LENGTH"
     exit 1
 fi
 
 # ══════════════════════════════════════════════════════════════════════════
 # 2. CONVENTIONAL COMMITS FORMAT CHECK
 # ══════════════════════════════════════════════════════════════════════════
-if ! echo "$FIRST_LINE" | grep -qE "$REG_CONVENTIONAL"; then
-    echo -e "  \033[0;31m✘ Invalid format.\033[0m"
-    echo ""
-    echo -e "  \033[1;33mExpected Format:\033[0m"
-    echo -e "    type(scope): description"
-    echo ""
-    echo -e "  \033[1;33mAllowed Types:\033[0m"
-    echo -e "    feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert"
-    echo ""
-    echo -e "  \033[1;33mExample:\033[0m"
-    echo -e "    feat(auth): add email verification"
-    echo ""
-    echo -e "  \033[0;37mRef: https://www.conventionalcommits.org/\033[0m"
+if ! printf '%s\n' "$FIRST_LINE" | grep -qE "$REG_CONVENTIONAL"; then
+    printf '\033[0;31m✘ Invalid format.\033[0m\n'
+    printf '\n'
+    printf '\033[1;33mExpected Format:\033[0m\n'
+    printf '    type(scope): description\n'
+    printf '\n'
+    printf '\033[1;33mAllowed Types:\033[0m\n'
+    printf '    feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert\n'
+    printf '\n'
+    printf '\033[1;33mExample:\033[0m\n'
+    printf '    feat(auth): add email verification\n'
+    printf '\n'
+    printf '\033[0;37mRef: https://www.conventionalcommits.org/\033[0m\n'
     exit 1
 fi
 
 # ══════════════════════════════════════════════════════════════════════════
 # 3. SUCCESS MESSAGE
 # ══════════════════════════════════════════════════════════════════════════
-echo -e "  \033[0;32m✔ Commit message format is valid\033[0m"
-echo ""
+printf '\033[0;32m✔ Commit message format is valid\033[0m\n'
+printf '\n'
 exit 0

@@ -10,12 +10,29 @@ Automated Git Hooks for CodeIgniter 4 projects. This package ensures your code m
 ## ✨ Features
 
 - 🔍 **PHP Syntax Check** - Validates PHP syntax (lint) on all staged files.
-- 📊 **PHPStan Analysis** - Performs deep static analysis to find potential bugs (Level: Max).
+- 📊 **PHPStan Analysis** - Performs deep static analysis to find potential bugs (Level 10).
 - 👃 **PHP_CodeSniffer** - Validates PSR-12 compliance and coding standards.
 - 🎨 **PHP CS Fixer** - Automatically formats code to follow defined styles.
 - 🎯 **Smart Scope** - Only analyzes staged files to keep your workflow fast.
-- 🌈 **Termwind Output** - Beautiful, colorful console feedback with icons.
+- 🌈 **Native ANSI Output** - Beautiful, colorful console feedback with icons (respects `NO_COLOR`).
 - 🔧 **Zero Config** - Works out of the box with sensible defaults for CI4.
+
+## 🗺️ Roadmap
+
+Planned, not yet available:
+
+- **`git-hooks.json`** - Project-level configuration: `auto_install`, `build_dir`, tool
+  toggles (`phpstan`, `phpcs`, `php_cs_fixer`, `phpunit`), `commit_msg` overrides
+  (`min_length`, `max_length`, `types`), and a **tool/config allowlist** to decide which
+  project configuration files and `vendor/bin` binaries the hooks may run (trust gate for
+  SEC-001).
+- **Opt-in auto-install** - Option to install hooks automatically on `composer install`/`update`.
+- **PHP-based hooks** - Replace the current shell scripts with PHP bootstrap scripts that
+  delegate to the package classes.
+- **`NO_COLOR` in shell hooks** - Make the installed shell hooks honor `NO_COLOR` (today it
+  is respected by the installer/uninstaller console output, not by the hook scripts).
+
+See [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) for the planned configuration schema.
 
 ## 📋 Requirements
 
@@ -39,15 +56,27 @@ Install the package as a development dependency:
 composer require --dev cihispano/git-hooks
 ```
 
-The hooks will be installed automatically after installation.
-
-### Manual Installation
-
-If you need to reinstall the hooks:
+Then install the hooks into the current repository:
 
 ```bash
 composer install-hooks
 ```
+
+> The hooks are **not** installed automatically on `composer install`/`update`; run
+> `composer install-hooks` once per repository (and again after updating the package)
+> to install or refresh them. Use `composer uninstall-hooks` to remove them.
+
+### Install Location
+
+Hooks are copied to the repository's hooks directory, resolved in the following order:
+
+1. `git -C <directory> rev-parse --git-path hooks` — always preferred, so git decides
+   the location for worktrees, submodules, and `core.hooksPath`.
+2. Manual fallback that parses `.git` (directory or `gitdir:` file) and linked-worktree
+   `commondir` files.
+
+The hooks source is always read from the installed package root, so the install works
+identically whether the package lives at the project root or under `vendor/`.
 
 ## 🚀 Usage
 
@@ -58,9 +87,9 @@ Once installed, the hooks work automatically.
 Every time you commit code, the `pre-commit` hook will:
 
 1. ✅ Check PHP syntax on all staged `.php` files
-2. ✅ Run PHPStan analysis (if installed)
+2. ✅ Verify formatting with PHP CS Fixer (if installed)
 3. ✅ Check PSR-12 compliance with PHP_CodeSniffer (if installed)
-4. ✅ Verify formatting with PHP CS Fixer (if installed)
+4. ✅ Run PHPStan analysis (if installed)
 
 ### `commit-msg`
 
@@ -84,25 +113,23 @@ This repository ships its own PHPUnit suite for the package itself. The installe
 ### Example Output
 
 ```bash
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Starting CodeIgniter pre-commit checks...
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   CiHispano: Running Centralized Quality Checks
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [1/4] Checking PHP syntax...
-✓ Syntax check passed
+✓ Syntax is valid
 
-[2/4] Running PHPStan analysis...
-✓ Analysis passed
+[2/4] Validating code style...
+✓ Coding style verified
 
-[3/4] Sniffing code style (PHPCS)...
-✓ PSR-12 compliance verified
+[3/4] Sniffing code standards...
+✓ Standards check passed
 
-[4/4] Verifying formatting (PHP CS Fixer)...
-✓ Style check passed
+[4/4] Running static analysis...
+✓ Static analysis completed
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ All checks passed! Proceeding with commit...
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ All checks passed! Proceeding with commit.
 ```
 
 ### When a Check Fails
@@ -110,8 +137,8 @@ Starting CodeIgniter pre-commit checks...
 If any check fails, the commit will be blocked:
 
 ```bash
-[4/4] Verifying formatting (PHP CS Fixer)...
-✗ Code style issues in: app/Controllers/Home.php
+[2/4] Validating code style...
+✗ Style violations found.
 Run: php vendor/bin/php-cs-fixer fix app/Controllers/Home.php
 ```
 
@@ -150,7 +177,27 @@ composer uninstall-hooks
 
 ### Customizing the Hooks
 
-The hooks are located in your project's `.git/hooks/` directory after installation. You can modify them if needed, but keep in mind they will be overwritten when you update the package.
+The hooks are located in your repository's hooks directory (usually `.git/hooks/`, but
+git-first resolution honors `core.hooksPath` and worktrees) after installation. You can
+modify them if needed, but keep in mind they will be overwritten when you update the package.
+
+## 🔒 Trust boundary
+
+The hooks execute **repository-controlled code** with **your user's privileges**:
+
+- `pre-commit` runs the QA tools from `vendor/bin` (`php-cs-fixer`, `phpcs`, `phpstan`)
+  against the staged files, using the project's own configs when present
+  (`.php-cs-fixer(.dist).php`, `phpcs.xml(.dist)`, `phpstan.neon(.dist)`, `phpunit.xml(.dist)`).
+- `pre-push` runs the project's PHPUnit suite and a full PHPStan analysis.
+
+A malicious config file or `vendor/bin` tool in a checked-out branch can therefore run
+code on every developer's machine at the next `commit`/`push`. Install these hooks **only
+in repositories you already trust** — the repo config overrides the package defaults by
+design, and the trust model is documented in
+[`docs/INSTALLATION.md`](docs/INSTALLATION.md#trust-boundary).
+
+For the 0.1.0 line this is documentation only; a `git-hooks.json` allowlist to gate which
+configs and binaries the hooks may run is planned (see [Roadmap](#-roadmap)).
 
 ## 📊 Composer Scripts
 
@@ -168,10 +215,20 @@ This package provides the following Composer scripts:
             "@cs",
             "@test"
         ],
+        "clear:cache": [
+            "@php -r \"if (file_exists('build/.php-cs-fixer.cache')) unlink('build/.php-cs-fixer.cache');\"",
+            "@php -r \"if (file_exists('build/phpstan.cache')) unlink('build/phpstan.cache');\"",
+            "@php -r \"echo 'Cache cleared successfully' . PHP_EOL;\""
+        ],
         "cs": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/php-cs-fixer fix --ansi --verbose --dry-run --diff",
         "cs:fix": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/php-cs-fixer fix --ansi --verbose --diff",
+        "reset": [
+            "@php scripts/reset.php",
+            "@composer install --no-interaction --optimize-autoloader"
+        ],
         "sniff": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/phpcs",
         "sniff:fix": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/phpcbf",
+        "style": "@cs:fix",
         "test": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/phpunit --configuration phpunit.xml.dist --colors=always",
         "test:coverage": "@php -d xdebug.mode=coverage -d xdebug.start_with_request=yes vendor/bin/phpunit --configuration phpunit.xml.dist --colors=always --coverage-text --coverage-html build/coverage"
     }
@@ -185,13 +242,21 @@ composer install-hooks
 composer uninstall-hooks
 composer analyze
 composer check:all
+composer clear:cache
 composer sniff
 composer cs
 composer cs:fix
 composer sniff:fix
+composer style
+composer reset
 composer test
 composer test:coverage
 ```
+
+> `composer reset` removes installed dependencies and QA cache artifacts (`vendor/`,
+> `build/`, `.php-cs-fixer.cache`, `.phpunit.result.cache`) and reinstalls everything
+> from scratch, keeping `composer.lock` for reproducible validation. Run it before
+> validating each feature, fix, or bug.
 
 ## 🔧 Integration with Existing Projects
 

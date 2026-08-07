@@ -39,7 +39,7 @@ final class PathBuilder
         }
 
         $directory = \str_replace(['/', '\\'], \DIRECTORY_SEPARATOR, $directory);
-        $fileName = \str_replace(['/', '\\'], \DIRECTORY_SEPARATOR, $fileName);
+        $fileName  = \str_replace(['/', '\\'], \DIRECTORY_SEPARATOR, $fileName);
 
         return \rtrim($directory, \DIRECTORY_SEPARATOR)
             . \DIRECTORY_SEPARATOR
@@ -58,6 +58,65 @@ final class PathBuilder
         $path = \str_replace(['/', '\\'], \DIRECTORY_SEPARATOR, $path);
 
         return \rtrim($path, \DIRECTORY_SEPARATOR);
+    }
+
+    /**
+     * Canonicalize a path by resolving '.' and '..' segments lexically.
+     *
+     * Unlike realpath(), it does not require the file to exist and does not
+     * traverse symlinks. Absolute and relative paths are preserved. An empty
+     * input stays empty, and a non-empty input that collapses to nothing (for
+     * example `'hooks/..'`) resolves to the current directory ('.').
+     */
+    public static function canonicalize(string $path): string
+    {
+        if (self::isStreamWrapper($path)) {
+            return self::normalize($path);
+        }
+
+        $drivePrefix  = '';
+        $windowsMatch = [];
+
+        if (\preg_match('/^(.):[\\\\\/](.*)$/', $path, $windowsMatch) === 1) {
+            $drivePrefix = \strtoupper($windowsMatch[1]) . ':' . \DIRECTORY_SEPARATOR;
+            $path        = $windowsMatch[2];
+        }
+
+        $isAbsolute = self::isAbsolute($path);
+        $segments   = \array_filter(
+            \preg_split('#[\\\\/]#', $path) ?: [],
+            static fn (string $segment): bool => '' !== $segment && '.' !== $segment,
+        );
+
+        $resolved = [];
+
+        foreach ($segments as $segment) {
+            if ('..' === $segment) {
+                if ([] !== $resolved && \end($resolved) !== '..') {
+                    \array_pop($resolved);
+
+                    continue;
+                }
+
+                if (! $isAbsolute) {
+                    $resolved[] = $segment;
+                }
+
+                continue;
+            }
+
+            $resolved[] = $segment;
+        }
+
+        $prefix = $drivePrefix !== '' ? $drivePrefix : ($isAbsolute ? \DIRECTORY_SEPARATOR : '');
+
+        $result = $prefix . \implode(\DIRECTORY_SEPARATOR, $resolved);
+
+        if ('' === $prefix && '' === $result && '' !== $path) {
+            return '.';
+        }
+
+        return $result;
     }
 
     /**
@@ -85,33 +144,6 @@ final class PathBuilder
     public static function isAbsolute(string $path): bool
     {
         return \str_starts_with($path, '/') || \preg_match('/^[a-zA-Z]:[\\\\\/]/', $path);
-    }
-
-    /**
-     * Detect Git hooks directory path (Cross-platform).
-     */
-    public static function getHooksPath(): ?string
-    {
-        if (!\function_exists('shell_exec')) {
-            return null;
-        }
-
-        $isWindows = PHP_OS_FAMILY === 'Windows';
-        $nullDevice = $isWindows ? 'NUL' : '/dev/null';
-
-        $path = @\shell_exec("git rev-parse --git-path hooks 2>{$nullDevice}");
-
-        if (!\is_string($path)) {
-            return null;
-        }
-
-        $trimmedPath = \trim($path);
-
-        if ('' === $trimmedPath) {
-            return null;
-        }
-
-        return self::normalize($trimmedPath);
     }
 
     /**

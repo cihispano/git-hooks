@@ -15,22 +15,25 @@ namespace CiHispano\Tests\Unit;
 use CiHispano\Config;
 use CiHispano\ConsoleLogger;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Console\Output\BufferedOutput;
-use Termwind\Termwind;
 
 final class ConsoleLoggerTest extends TestCase
 {
-    private BufferedOutput $output;
+    /**
+     * @var resource
+     */
+    private $output;
 
     protected function setUp(): void
     {
-        $this->output = new BufferedOutput();
-        Termwind::renderUsing($this->output);
+        $this->output = \fopen('php://memory', 'r+');
+        ConsoleLogger::setOutputStream($this->output);
+        \putenv('NO_COLOR');
     }
 
     protected function tearDown(): void
     {
-        Termwind::renderUsing(null);
+        ConsoleLogger::setOutputStream(null);
+        \fclose($this->output);
     }
 
     public function testErrorOutputsMessage(): void
@@ -135,8 +138,22 @@ final class ConsoleLoggerTest extends TestCase
         self::assertNotEmpty($this->clean());
     }
 
+    public function testNoColorDisablesAnsiSequences(): void
+    {
+        \putenv('NO_COLOR=1');
+
+        ConsoleLogger::header('Header', Config::COLOR_INFO);
+
+        $output = $this->clean();
+
+        self::assertStringContainsString('Header', $output);
+        self::assertStringNotContainsString("\033[", $output);
+    }
+
     private function clean(): string
     {
-        return \preg_replace('/\e\[[\d;]*m/', '', $this->output->fetch()) ?? '';
+        \rewind($this->output);
+
+        return \preg_replace('/\e\[[\d;]*m/', '', \stream_get_contents($this->output)) ?? '';
     }
 }

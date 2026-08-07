@@ -12,107 +12,148 @@
 # 1. ENVIRONMENT SETUP
 # ══════════════════════════════════════════════════════════════════════════
 
-# Determine the project root (3 levels above .git/hooks)
-PROJECT_ROOT=$(php -r "echo dirname(dirname(dirname(realpath('$0'))));")
+# Determine the project root.
+#
+# Git runs hooks from the repository root, so `git rev-parse --show-toplevel`
+# is authoritative and also honors `core.hooksPath`, worktrees and submodules
+# (the hook file may live outside the default `.git/hooks`).
+# The fallback resolves from the hook path (hooks dir -> .git -> root) and is
+# never interpolated into PHP code, so checkout paths containing quotes or
+# metacharacters are safe.
+if command -v git >/dev/null 2>&1 \
+    && PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) \
+    && [ -n "$PROJECT_ROOT" ]; then
+    :
+else
+    HOOK_DIR=$(unset CDPATH; cd -- "$(dirname -- "$0")" && pwd) || exit 1
+    PROJECT_ROOT=$(dirname -- "$(dirname -- "$HOOK_DIR")")
+fi
 VENDOR_BIN="$PROJECT_ROOT/vendor/bin"
 # Path to your package inside the project's vendor folder
 PACKAGE_CONFIG="$PROJECT_ROOT/vendor/cihispano/git-hooks"
 export XDEBUG_MODE=off
 PHP_XDEBUG_FLAGS="-d xdebug.mode=off -d xdebug.log="
 
-# Get staged PHP files
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR HEAD | grep "\\.php$")
+# Get staged PHP files.
+#
+# `set -f` disables glob expansion and IFS is reduced to a single newline, so
+# filenames containing spaces or shell metacharacters are kept intact and are
+# never word-split or glob-expanded against the working tree.
+set -f
+IFS='
+'
+# The first commit has no HEAD yet, so `git diff --cached` is used without a
+# revision when there is no commit and the file matches never exist in stash
+# scenarios; HEAD is only referenced when an initial commit already exists.
+if git rev-parse --verify --quiet HEAD > /dev/null 2>&1; then
+    STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR HEAD | grep "\\.php$")
+else
+    STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep "\\.php$")
+fi
 
-echo ""
-echo -e "\033[0;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e "\033[1;36m   CiHispano: Running Centralized Quality Checks          \033[0m"
-echo -e "\033[0;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+printf '\n'
+printf '\033[0;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n'
+printf '\033[1;36m   CiHispano: Running Centralized Quality Checks          \033[0m\n'
+printf '\033[0;36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n'
 
 if [ -z "$STAGED_FILES" ]; then
-    echo -e "  \033[0;33m⚠ No PHP files staged for commit.\033[0m"
-    echo ""
+    printf '\033[0;33m  ⚠ No PHP files staged for commit.\033[0m\n'
+    printf '\n'
     exit 0
 fi
 
-cd "$PROJECT_ROOT"
+cd "$PROJECT_ROOT" || exit 1
 
 # ══════════════════════════════════════════════════════════════════════════
 # 1. PHP LINT (Syntax Check)
 # ══════════════════════════════════════════════════════════════════════════
-echo -e "\033[1;34m  [1/4] Checking PHP syntax...\033[0m"
+printf '\033[1;34m  [1/4] Checking PHP syntax...\033[0m\n'
 for FILE in $STAGED_FILES; do
     if [ -f "$FILE" ]; then
-        php $PHP_XDEBUG_FLAGS -l -d display_errors=0 "$FILE" > /dev/null 2>&1
-        if [ $? != 0 ]; then
-            echo -e "  \033[0;31m✘ Syntax error in: $FILE\033[0m"
+        # "$PHP_XDEBUG_FLAGS" is an intentionally word-split flags list, not a path.
+        # shellcheck disable=SC2086
+        if ! php $PHP_XDEBUG_FLAGS -l -d display_errors=0 "$FILE" > /dev/null 2>&1; then
+            printf '\033[0;31m✘ Syntax error in: %s\033[0m\n' "$FILE"
+            # shellcheck disable=SC2086
             php $PHP_XDEBUG_FLAGS -l "$FILE"
             exit 1
         fi
     fi
 done
-echo -e "  \033[0;32m✔ Syntax is valid\033[0m"
+printf '\033[0;32m✔ Syntax is valid\033[0m\n'
 
 # ══════════════════════════════════════════════════════════════════════════
 # 2. PHP CS FIXER
 # ══════════════════════════════════════════════════════════════════════════
 if [ -f "$VENDOR_BIN/php-cs-fixer" ]; then
-    echo -e "\033[1;34m  [2/4] Validating code style...\033[0m"
+    printf '\033[1;34m  [2/4] Validating code style...\033[0m\n'
 
     # Priority: Project root .php-cs-fixer.php > .php-cs-fixer.dist.php > Package central config
     CS_CONFIG=".php-cs-fixer.php"
     [ ! -f "$CS_CONFIG" ] && CS_CONFIG=".php-cs-fixer.dist.php"
     [ ! -f "$CS_CONFIG" ] && CS_CONFIG="$PACKAGE_CONFIG/.php-cs-fixer.dist.php"
 
-    php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/php-cs-fixer" fix --config="$CS_CONFIG" --dry-run --diff --ansi $STAGED_FILES
-
-    if [ $? != 0 ]; then
-        echo -e "  \033[0;31m✘ Style violations found.\033[0m"
-        exit 1
-    fi
-    echo -e "  \033[0;32m✔ Coding style verified\033[0m"
+    for FILE in $STAGED_FILES; do
+        if [ -f "$FILE" ]; then
+            # "$PHP_XDEBUG_FLAGS" is an intentionally word-split flags list, not a path.
+            # shellcheck disable=SC2086
+            if ! php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/php-cs-fixer" fix --config="$CS_CONFIG" --dry-run --diff --ansi "$FILE"; then
+                printf '\033[0;31m✘ Style violations found.\033[0m\n'
+                exit 1
+            fi
+        fi
+    done
+    printf '\033[0;32m✔ Coding style verified\033[0m\n'
 fi
 
 # ══════════════════════════════════════════════════════════════════════════
 # 3. PHP CODE SNIFFER
 # ══════════════════════════════════════════════════════════════════════════
 if [ -f "$VENDOR_BIN/phpcs" ]; then
-    echo -e "\033[1;34m  [3/4] Sniffing code standards...\033[0m"
+    printf '\033[1;34m  [3/4] Sniffing code standards...\033[0m\n'
 
     # Priority: Project root phpcs.xml > phpcs.xml.dist > Package central config
     PHPCS_CONFIG="phpcs.xml"
     [ ! -f "$PHPCS_CONFIG" ] && PHPCS_CONFIG="phpcs.xml.dist"
     [ ! -f "$PHPCS_CONFIG" ] && PHPCS_CONFIG="$PACKAGE_CONFIG/phpcs.xml.dist"
 
-    php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/phpcs" --standard="$PHPCS_CONFIG" --colors $STAGED_FILES
-
-    if [ $? != 0 ]; then
-        echo -e "  \033[0;31m✘ Standard violations detected.\033[0m"
-        exit 1
-    fi
-    echo -e "  \033[0;32m✔ Standards check passed\033[0m"
+    for FILE in $STAGED_FILES; do
+        if [ -f "$FILE" ]; then
+            # "$PHP_XDEBUG_FLAGS" is an intentionally word-split flags list, not a path.
+            # shellcheck disable=SC2086
+            if ! php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/phpcs" --standard="$PHPCS_CONFIG" --colors "$FILE"; then
+                printf '\033[0;31m✘ Standard violations detected.\033[0m\n'
+                exit 1
+            fi
+        fi
+    done
+    printf '\033[0;32m✔ Standards check passed\033[0m\n'
 fi
 
 # ══════════════════════════════════════════════════════════════════════════
 # 4. PHPSTAN
 # ══════════════════════════════════════════════════════════════════════════
 if [ -f "$VENDOR_BIN/phpstan" ]; then
-    echo -e "\033[1;34m  [4/4] Running static analysis...\033[0m"
+    printf '\033[1;34m  [4/4] Running static analysis...\033[0m\n'
 
     # Priority: Project root phpstan.neon > phpstan.neon.dist > Package central config
     STAN_CONFIG="phpstan.neon"
     [ ! -f "$STAN_CONFIG" ] && STAN_CONFIG="phpstan.neon.dist"
     [ ! -f "$STAN_CONFIG" ] && STAN_CONFIG="$PACKAGE_CONFIG/phpstan.neon.dist"
 
-    php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/phpstan" analyse -c "$STAN_CONFIG" --no-progress --ansi $STAGED_FILES
-
-    if [ $? != 0 ]; then
-        echo -e "  \033[0;31m✘ PHPStan found logic or type errors.\033[0m"
-        exit 1
-    fi
-    echo -e "  \033[0;32m✔ Static analysis completed\033[0m"
+    for FILE in $STAGED_FILES; do
+        if [ -f "$FILE" ]; then
+            # shellcheck disable=SC2086
+            if ! php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/phpstan" analyse -c "$STAN_CONFIG" --no-progress --ansi "$FILE"; then
+                printf '\033[0;31m✘ PHPStan found logic or type errors.\033[0m\n'
+                exit 1
+            fi
+        fi
+    done
+    printf '\033[0;32m✔ Static analysis completed\033[0m\n'
 fi
 
-echo ""
-echo -e "\033[0;32m  ✔ All checks passed! Proceeding with commit.\033[0m"
-echo ""
+printf '\n'
+printf '\033[0;32m  ✔ All checks passed! Proceeding with commit.\033[0m\n'
+printf '\n'
 exit 0
