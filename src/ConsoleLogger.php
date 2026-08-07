@@ -24,8 +24,7 @@ use CiHispano\Support\CliIcons;
 final class ConsoleLogger
 {
     private const RESET = "\033[0m";
-
-    private const BOLD = '1';
+    private const BOLD  = '1';
 
     /**
      * ANSI foreground color codes.
@@ -33,14 +32,14 @@ final class ConsoleLogger
      * @var array<string, string>
      */
     private const FOREGROUND = [
-        'black' => '30',
-        'red' => '31',
-        'green' => '32',
-        'yellow' => '33',
-        'blue' => '34',
+        'black'   => '30',
+        'red'     => '31',
+        'green'   => '32',
+        'yellow'  => '33',
+        'blue'    => '34',
         'magenta' => '35',
-        'cyan' => '36',
-        'white' => '37',
+        'cyan'    => '36',
+        'white'   => '37',
     ];
 
     /**
@@ -49,20 +48,20 @@ final class ConsoleLogger
      * @var array<string, string>
      */
     private const BACKGROUND = [
-        'black' => '40',
-        'red' => '41',
-        'green' => '42',
-        'yellow' => '43',
-        'blue' => '44',
+        'black'   => '40',
+        'red'     => '41',
+        'green'   => '42',
+        'yellow'  => '43',
+        'blue'    => '44',
         'magenta' => '45',
-        'cyan' => '46',
-        'white' => '47',
+        'cyan'    => '46',
+        'white'   => '47',
     ];
 
     /**
      * Output stream override, mainly for tests.
      *
-     * @var null|resource
+     * @var resource|null
      */
     private static mixed $stream = null;
 
@@ -72,7 +71,7 @@ final class ConsoleLogger
      * Useful in tests: pass a stream resource (e.g. "php://memory") to capture output.
      * Pass null to restore standard output.
      *
-     * @param null|resource $stream
+     * @param resource|null $stream
      */
     public static function setOutputStream(mixed $stream): void
     {
@@ -272,7 +271,7 @@ final class ConsoleLogger
         string $color,
         bool $include,
     ): string {
-        if (!$include) {
+        if (! $include) {
             return '';
         }
 
@@ -293,7 +292,7 @@ final class ConsoleLogger
         string $code,
         bool $bold = false,
     ): string {
-        if (!self::supportsColor()) {
+        if (! self::supportsColor()) {
             return $text;
         }
 
@@ -320,11 +319,11 @@ final class ConsoleLogger
         string $name,
         bool $bold = false,
     ): string {
-        if (!self::supportsColor()) {
+        if (! self::supportsColor()) {
             return $text;
         }
 
-        $code = self::FOREGROUND[$name] ?? self::FOREGROUND['white'];
+        $code      = self::FOREGROUND[$name] ?? self::FOREGROUND['white'];
         $modifiers = [$code];
 
         if ($bold) {
@@ -364,10 +363,6 @@ final class ConsoleLogger
             return false;
         }
 
-        if (!\defined('STDOUT') || !\stream_isatty(STDOUT)) {
-            return false;
-        }
-
-        return true;
+        return ! (! \defined('STDOUT') || ! \stream_isatty(STDOUT));
     }
 }

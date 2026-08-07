@@ -16,6 +16,24 @@
 
     <rule ref="PSR12"/>
 
+    <!--
+        Ownership split:
+        - PHP CS Fixer (CodeIgniter coding standard) owns every mechanically fixable rule:
+          imports, phpdoc formatting, operator spacing, list<> types, strict_types... Run
+          `composer cs:fix` for those.
+        - PHP_CodeSniffer (PSR12 + the curated Slevomat sniffs below) only OWNS rules that
+          require a human decision or cannot be auto-fixed.
+    -->
+    <rule ref="SlevomatCodingStandard.Arrays.DisallowImplicitArrayCreation"/>
+    <rule ref="SlevomatCodingStandard.Classes.RequireConstructorPropertyPromotion"/>
+    <rule ref="SlevomatCodingStandard.Files.TypeNameMatchesFileName">
+        <properties>
+            <property name="rootNamespaces" type="array">
+                <element key="src" value="CiHispano"/>
+            </property>
+        </properties>
+    </rule>
+
     <rule ref="Generic.Arrays.DisallowLongArraySyntax"/>
     <rule ref="Generic.Formatting.SpaceBeforeCast"/>
 

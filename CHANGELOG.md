@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a `composer reset` command (`scripts/reset.php`) that removes dependencies and QA
+  cache artifacts (`vendor/`, `build/`, `.php-cs-fixer.cache`, `.phpunit.result.cache`),
+  then reinstalls from scratch keeping `composer.lock` for reproducible validation — run
+  it before validating every feature/fix/bug.
+- Added CodeIgniter4 coding standard as a dev dependency.
+- Added coding standard ownership split: PHP CS Fixer (CodeIgniter coding standard) owns
+  all mechanically fixable rules; PHP_CodeSniffer only keeps non-auto-fixable rules.
+- Added curated Slevomat sniffs to the PHPCS ruleset: implicit array creation, constructor
+  property promotion, and namespace/root mapping.
 - Added GitLab issue templates (Task/Chore, Feature Request, Bug Report) under `.gitlab/issue_templates/`.
 - Added GitLab merge request template under `.gitlab/merge_request_templates/`.
 - Added `docs/INSTALLATION.md` with install, hook install/uninstall, verification, and emergency skip guidance.
@@ -17,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Switched the PHP CS Fixer config to the CodeIgniter coding standard ruleset, keeping the CiHispano header via overrides.
 - Replaced the Termwind runtime dependency with native ANSI console output that respects `NO_COLOR`.
 - Upgraded PHPStan from 1.x to 2.x and set the analysis level to 10.
 - Expanded runtime compatibility to PHP 8.1 through 8.4.
@@ -26,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kept coding-style checks on PHP 8.1 baseline to avoid version-dependent formatter output.
 - Removed typed class constants to maintain source compatibility with PHP 8.1.
 - Expanded unit-test coverage for utility/config classes, including private empty constructors.
+- Re-styled source files to the CodeIgniter coding standard (PHP CS Fixer).
 
 ## [1.0.0] - 2026-03-20
 

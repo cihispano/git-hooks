@@ -39,7 +39,7 @@ final class PathBuilder
         }
 
         $directory = \str_replace(['/', '\\'], \DIRECTORY_SEPARATOR, $directory);
-        $fileName = \str_replace(['/', '\\'], \DIRECTORY_SEPARATOR, $fileName);
+        $fileName  = \str_replace(['/', '\\'], \DIRECTORY_SEPARATOR, $fileName);
 
         return \rtrim($directory, \DIRECTORY_SEPARATOR)
             . \DIRECTORY_SEPARATOR
@@ -92,16 +92,16 @@ final class PathBuilder
      */
     public static function getHooksPath(): ?string
     {
-        if (!\function_exists('shell_exec')) {
+        if (! \function_exists('shell_exec')) {
             return null;
         }
 
-        $isWindows = PHP_OS_FAMILY === 'Windows';
+        $isWindows  = PHP_OS_FAMILY === 'Windows';
         $nullDevice = $isWindows ? 'NUL' : '/dev/null';
 
         $path = @\shell_exec("git rev-parse --git-path hooks 2>{$nullDevice}");
 
-        if (!\is_string($path)) {
+        if (! \is_string($path)) {
             return null;
         }
 

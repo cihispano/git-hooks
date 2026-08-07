@@ -47,7 +47,7 @@ final class Config
     /**
      * Default hook files available for installation.
      *
-     * @var array<string>
+     * @var list<string>
      */
     public const DEFAULT_HOOKS = [
         'pre-commit',
@@ -58,7 +58,7 @@ final class Config
     /**
      * File extensions to exclude from hook installation.
      *
-     * @var array<string>
+     * @var list<string>
      */
     public const EXCLUDED_EXTENSIONS = [
         '.sample',

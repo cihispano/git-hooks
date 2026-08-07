@@ -13,6 +13,8 @@ declare(strict_types=1);
 namespace CiHispano\Util;
 
 use CiHispano\Config;
+use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * FileComparator.
@@ -39,7 +41,7 @@ final class FileComparator
      *
      * @return bool True if files are identical
      *
-     * @throws \RuntimeException If hash calculation fails
+     * @throws RuntimeException If hash calculation fails
      */
     public static function areIdentical(
         string $file1,
@@ -60,24 +62,24 @@ final class FileComparator
      *
      * @return string File hash
      *
-     * @throws \RuntimeException If file doesn't exist or hash calculation fails
+     * @throws RuntimeException If file doesn't exist or hash calculation fails
      */
     public static function getHash(
         string $file,
         string $algorithm = Config::DEFAULT_ALGORITHM,
     ): string {
-        if (!\file_exists($file)) {
-            throw new \RuntimeException("File not found: {$file}");
+        if (! \file_exists($file)) {
+            throw new RuntimeException("File not found: {$file}");
         }
 
-        if (!\is_readable($file)) {
-            throw new \RuntimeException("File is not readable: {$file}");
+        if (! \is_readable($file)) {
+            throw new RuntimeException("File is not readable: {$file}");
         }
 
         $hash = \hash_file($algorithm, $file);
 
         if (false === $hash) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 "Failed to calculate {$algorithm} hash for: {$file}",
             );
         }
@@ -94,7 +96,7 @@ final class FileComparator
      *
      * @return bool True if file hash matches expected hash
      *
-     * @throws \RuntimeException If hash calculation fails
+     * @throws RuntimeException If hash calculation fails
      */
     public static function matchesHash(
         string $file,
@@ -109,27 +111,27 @@ final class FileComparator
     /**
      * Compare multiple files and return true if all are identical.
      *
-     * @param array<string> $files     List of file paths to compare
-     * @param string        $algorithm Hash algorithm to use (default: sha256)
+     * @param list<string> $files     List of file paths to compare
+     * @param string       $algorithm Hash algorithm to use (default: sha256)
      *
      * @return bool True if all files are identical
      *
-     * @throws \RuntimeException         If hash calculation fails
-     * @throws \InvalidArgumentException If less than 2 files provided
+     * @throws InvalidArgumentException If less than 2 files provided
+     * @throws RuntimeException         If hash calculation fails
      */
     public static function areAllIdentical(
         array $files,
         string $algorithm = Config::DEFAULT_ALGORITHM,
     ): bool {
         if (\count($files) < 2) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'At least 2 files required for comparison',
             );
         }
 
         $firstHash = self::getHash($files[0], $algorithm);
 
-        for ($i = 1; $i < \count($files); ++$i) {
+        for ($i = 1; $i < \count($files); $i++) {
             $currentHash = self::getHash($files[$i], $algorithm);
 
             if ($firstHash !== $currentHash) {
@@ -143,7 +145,7 @@ final class FileComparator
     /**
      * Get list of supported hash algorithms.
      *
-     * @return array<string> List of supported algorithms
+     * @return list<string> List of supported algorithms
      */
     public static function getSupportedAlgorithms(): array
     {
