@@ -14,118 +14,72 @@ namespace CiHispano\Tests\Unit\Util;
 
 use CiHispano\Util\FilePermissions;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
+/**
+ * @internal
+ */
 final class FilePermissionsTest extends TestCase
 {
-    public function testDirNoAccessIsDefined(): void
-    {
-        self::assertTrue(\defined(FilePermissions::class . '::DIR_NO_ACCESS'));
-    }
-
     public function testDirNoAccessValue(): void
     {
-        self::assertSame(0o000, FilePermissions::DIR_NO_ACCESS);
-    }
-
-    public function testDirReadOnlyIsDefined(): void
-    {
-        self::assertTrue(\defined(FilePermissions::class . '::DIR_READ_ONLY'));
+        $this->assertSame(0o000, FilePermissions::DIR_NO_ACCESS);
     }
 
     public function testDirReadOnlyValue(): void
     {
-        self::assertSame(0o555, FilePermissions::DIR_READ_ONLY);
-    }
-
-    public function testDirPrivateIsDefined(): void
-    {
-        self::assertTrue(\defined(FilePermissions::class . '::DIR_PRIVATE'));
+        $this->assertSame(0o555, FilePermissions::DIR_READ_ONLY);
     }
 
     public function testDirPrivateValue(): void
     {
-        self::assertSame(0o700, FilePermissions::DIR_PRIVATE);
-    }
-
-    public function testDirDefaultIsDefined(): void
-    {
-        self::assertTrue(\defined(FilePermissions::class . '::DIR_DEFAULT'));
+        $this->assertSame(0o700, FilePermissions::DIR_PRIVATE);
     }
 
     public function testDirDefaultValue(): void
     {
-        self::assertSame(0o755, FilePermissions::DIR_DEFAULT);
-    }
-
-    public function testDirSharedWritableIsDefined(): void
-    {
-        self::assertTrue(\defined(FilePermissions::class . '::DIR_SHARED_WRITABLE'));
+        $this->assertSame(0o755, FilePermissions::DIR_DEFAULT);
     }
 
     public function testDirSharedWritableValue(): void
     {
-        self::assertSame(0o775, FilePermissions::DIR_SHARED_WRITABLE);
-    }
-
-    public function testDirWorldWritableIsDefined(): void
-    {
-        self::assertTrue(\defined(FilePermissions::class . '::DIR_WORLD_WRITABLE'));
+        $this->assertSame(0o775, FilePermissions::DIR_SHARED_WRITABLE);
     }
 
     public function testDirWorldWritableValue(): void
     {
-        self::assertSame(0o777, FilePermissions::DIR_WORLD_WRITABLE);
-    }
-
-    public function testFilePrivateIsDefined(): void
-    {
-        self::assertTrue(\defined(FilePermissions::class . '::FILE_PRIVATE'));
+        $this->assertSame(0o777, FilePermissions::DIR_WORLD_WRITABLE);
     }
 
     public function testFilePrivateValue(): void
     {
-        self::assertSame(0o600, FilePermissions::FILE_PRIVATE);
-    }
-
-    public function testFileSharedReadIsDefined(): void
-    {
-        self::assertTrue(\defined(FilePermissions::class . '::FILE_SHARED_READ'));
+        $this->assertSame(0o600, FilePermissions::FILE_PRIVATE);
     }
 
     public function testFileSharedReadValue(): void
     {
-        self::assertSame(0o644, FilePermissions::FILE_SHARED_READ);
-    }
-
-    public function testFileExecutableIsDefined(): void
-    {
-        self::assertTrue(\defined(FilePermissions::class . '::FILE_EXECUTABLE'));
+        $this->assertSame(0o644, FilePermissions::FILE_SHARED_READ);
     }
 
     public function testFileExecutableValue(): void
     {
-        self::assertSame(0o755, FilePermissions::FILE_EXECUTABLE);
-    }
-
-    public function testFileReadOnlyIsDefined(): void
-    {
-        self::assertTrue(\defined(FilePermissions::class . '::FILE_READ_ONLY'));
+        $this->assertSame(0o755, FilePermissions::FILE_EXECUTABLE);
     }
 
     public function testFileReadOnlyValue(): void
     {
-        self::assertSame(0o444, FilePermissions::FILE_READ_ONLY);
+        $this->assertSame(0o444, FilePermissions::FILE_READ_ONLY);
     }
 
     public function testClassCannotBeInstantiated(): void
     {
-        $reflection = new \ReflectionClass(FilePermissions::class);
+        $reflection = new ReflectionClass(FilePermissions::class);
 
-        self::assertTrue($reflection->isFinal(), 'Class should be final');
+        $this->assertTrue($reflection->isFinal(), 'Class should be final');
 
         $constructor = $reflection->getConstructor();
         if ($constructor !== null) {
-            self::assertFalse(
+            $this->assertFalse(
                 $constructor->isPublic(),
                 'Constructor should not be public if it exists',
             );
@@ -134,17 +88,17 @@ final class FilePermissionsTest extends TestCase
             $constructor->setAccessible(true);
             $constructor->invoke($instance);
 
-            self::assertInstanceOf(FilePermissions::class, $instance);
+            $this->assertInstanceOf(FilePermissions::class, $instance);
         }
     }
 
     public function testAllConstantsArePublic(): void
     {
-        $reflection = new \ReflectionClass(FilePermissions::class);
-        $constants = $reflection->getReflectionConstants();
+        $reflection = new ReflectionClass(FilePermissions::class);
+        $constants  = $reflection->getReflectionConstants();
 
         foreach ($constants as $constant) {
-            self::assertTrue(
+            $this->assertTrue(
                 $constant->isPublic(),
                 "Constant {$constant->getName()} should be public",
             );
@@ -163,22 +117,23 @@ final class FilePermissionsTest extends TestCase
             'FILE_PRIVATE',
             'FILE_SHARED_READ',
             'FILE_EXECUTABLE',
-            'FILE_READ_ONLY'
+            'FILE_READ_ONLY',
         ];
 
-        $reflection = new \ReflectionClass(FilePermissions::class);
-        $defined = array_keys($reflection->getConstants());
+        $reflection = new ReflectionClass(FilePermissions::class);
+        $defined    = \array_keys($reflection->getConstants());
 
         foreach ($expected as $name) {
-            self::assertContains($name, $defined, "Missing constant: {$name}");
+            $this->assertContains($name, $defined, "Missing constant: {$name}");
         }
     }
 
     public function testAllConstantsAreIntegers(): void
     {
-        $reflection = new \ReflectionClass(FilePermissions::class);
+        $reflection = new ReflectionClass(FilePermissions::class);
+
         foreach ($reflection->getConstants() as $name => $value) {
-            self::assertIsInt($value, "Constant {$name} should be int");
+            $this->assertIsInt($value, "Constant {$name} should be int");
         }
     }
 }

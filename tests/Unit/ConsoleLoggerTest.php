@@ -16,6 +16,9 @@ use CiHispano\Config;
 use CiHispano\ConsoleLogger;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @internal
+ */
 final class ConsoleLoggerTest extends TestCase
 {
     /**
@@ -25,8 +28,11 @@ final class ConsoleLoggerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->output = \fopen('php://memory', 'r+');
-        ConsoleLogger::setOutputStream($this->output);
+        $stream = \fopen('php://memory', 'r+b');
+        $this->assertIsResource($stream);
+
+        $this->output = $stream;
+        ConsoleLogger::setOutputStream($stream);
         \putenv('NO_COLOR');
     }
 
@@ -42,8 +48,8 @@ final class ConsoleLoggerTest extends TestCase
 
         $output = $this->clean();
 
-        self::assertStringContainsString('ERROR', $output);
-        self::assertStringContainsString('Test error', $output);
+        $this->assertStringContainsString('ERROR', $output);
+        $this->assertStringContainsString('Test error', $output);
     }
 
     public function testErrorWithoutIcon(): void
@@ -52,42 +58,42 @@ final class ConsoleLoggerTest extends TestCase
 
         $output = $this->clean();
 
-        self::assertStringContainsString('No icon', $output);
+        $this->assertStringContainsString('No icon', $output);
     }
 
     public function testInfoOutputsMessage(): void
     {
         ConsoleLogger::info('Test info');
 
-        self::assertStringContainsString('Test info', $this->clean());
+        $this->assertStringContainsString('Test info', $this->clean());
     }
 
     public function testSuccessOutputsMessage(): void
     {
         ConsoleLogger::success(Config::COLOR_SUCCESS);
 
-        self::assertStringContainsString(Config::COLOR_SUCCESS, $this->clean());
+        $this->assertStringContainsString(Config::COLOR_SUCCESS, $this->clean());
     }
 
     public function testWarningOutputsMessage(): void
     {
         ConsoleLogger::warning(Config::COLOR_WARNING);
 
-        self::assertStringContainsString(Config::COLOR_WARNING, $this->clean());
+        $this->assertStringContainsString(Config::COLOR_WARNING, $this->clean());
     }
 
     public function testHeaderOutputsText(): void
     {
         ConsoleLogger::header('My Header', Config::COLOR_INFO);
 
-        self::assertStringContainsString('My Header', $this->clean());
+        $this->assertStringContainsString('My Header', $this->clean());
     }
 
     public function testBoxOutputsContent(): void
     {
         ConsoleLogger::box('Box content');
 
-        self::assertStringContainsString('Box content', $this->clean());
+        $this->assertStringContainsString('Box content', $this->clean());
     }
 
     public function testPanelOutputsTitleAndContent(): void
@@ -96,22 +102,22 @@ final class ConsoleLoggerTest extends TestCase
 
         $output = $this->clean();
 
-        self::assertStringContainsString('Panel Title', $output);
-        self::assertStringContainsString('Panel Content', $output);
+        $this->assertStringContainsString('Panel Title', $output);
+        $this->assertStringContainsString('Panel Content', $output);
     }
 
     public function testListItemOutputsMessage(): void
     {
         ConsoleLogger::listItem('Item');
 
-        self::assertStringContainsString('Item', $this->clean());
+        $this->assertStringContainsString('Item', $this->clean());
     }
 
     public function testAskOutputsQuestion(): void
     {
         ConsoleLogger::ask('Are you sure?');
 
-        self::assertStringContainsString('Are you sure?', $this->clean());
+        $this->assertStringContainsString('Are you sure?', $this->clean());
     }
 
     public function testStepOutputsCorrectFormat(): void
@@ -120,22 +126,22 @@ final class ConsoleLoggerTest extends TestCase
 
         $output = $this->clean();
 
-        self::assertStringContainsString('[2/5]', $output);
-        self::assertStringContainsString('Processing', $output);
+        $this->assertStringContainsString('[2/5]', $output);
+        $this->assertStringContainsString('Processing', $output);
     }
 
     public function testSeparatorOutputsCorrectLength(): void
     {
         ConsoleLogger::separator(10);
 
-        self::assertStringContainsString(\str_repeat('-', 10), $this->clean());
+        $this->assertStringContainsString(\str_repeat('-', 10), $this->clean());
     }
 
     public function testNewLineOutputsBreak(): void
     {
         ConsoleLogger::newLine();
 
-        self::assertNotEmpty($this->clean());
+        $this->assertNotEmpty($this->clean());
     }
 
     public function testNoColorDisablesAnsiSequences(): void
@@ -146,8 +152,8 @@ final class ConsoleLoggerTest extends TestCase
 
         $output = $this->clean();
 
-        self::assertStringContainsString('Header', $output);
-        self::assertStringNotContainsString("\033[", $output);
+        $this->assertStringContainsString('Header', $output);
+        $this->assertStringNotContainsString("\033[", $output);
     }
 
     private function clean(): string

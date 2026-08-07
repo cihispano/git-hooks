@@ -41,9 +41,11 @@ final class ComposerScripts
 
         if (! GitRepository::isGitRepository($basePath)) {
             ConsoleLogger::warning(
-                'This directory is not a Git repository. Hooks are installed but will never run.',
+                'This directory is not a Git repository. Aborting hook installation.',
                 true,
             );
+
+            return;
         }
 
         ConsoleLogger::separator(Config::SEPARATOR_LENGTH, Config::COLOR_INFO);

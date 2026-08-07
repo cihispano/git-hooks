@@ -9,6 +9,7 @@
     <arg value="ps"/>
 
     <file>src</file>
+    <file>tests</file>
 
     <exclude-pattern>*/vendor/*</exclude-pattern>
     <exclude-pattern>*/build/*</exclude-pattern>
@@ -30,6 +31,7 @@
         <properties>
             <property name="rootNamespaces" type="array">
                 <element key="src" value="CiHispano"/>
+                <element key="tests" value="CiHispano\Tests"/>
             </property>
         </properties>
     </rule>
