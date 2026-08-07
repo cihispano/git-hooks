@@ -73,11 +73,7 @@ jobs:
           done
 
       - name: Run shellcheck
-        uses: koalaman/shellcheck-action@v0.2.0
-        with:
-          path: src/Hooks
-          check_templates: false
-          severity: error
+        run: shellcheck --severity=error src/Hooks/pre-commit src/Hooks/pre-push src/Hooks/commit-msg
 
   coding-style:
     name: Coding style (PHP 8.1 baseline)
