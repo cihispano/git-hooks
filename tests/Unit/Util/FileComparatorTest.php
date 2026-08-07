@@ -15,8 +15,18 @@ namespace CiHispano\Tests\Unit\Util;
 use CiHispano\Config;
 use CiHispano\Util\FileComparator;
 use CiHispano\Util\FilePermissions;
+use FilesystemIterator;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use ReflectionClass;
+use RuntimeException;
+use SplFileInfo;
 
+/**
+ * @internal
+ */
 final class FileComparatorTest extends TestCase
 {
     private string $tempRoot;
@@ -26,7 +36,7 @@ final class FileComparatorTest extends TestCase
         $this->tempRoot = \sys_get_temp_dir() .
             \DIRECTORY_SEPARATOR . 'cihispano-file-comparator-' . \bin2hex(\random_bytes(8));
 
-        self::assertTrue(\mkdir($this->tempRoot, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($this->tempRoot, FilePermissions::DIR_DEFAULT, true));
     }
 
     protected function tearDown(): void
@@ -36,20 +46,20 @@ final class FileComparatorTest extends TestCase
 
     public function testClassCannotBeInstantiated(): void
     {
-        $reflection = new \ReflectionClass(FileComparator::class);
+        $reflection = new ReflectionClass(FileComparator::class);
 
-        self::assertTrue($reflection->isFinal(), 'Class should be final');
+        $this->assertTrue($reflection->isFinal(), 'Class should be final');
 
         $constructor = $reflection->getConstructor();
 
         if ($constructor !== null) {
-            self::assertFalse($constructor->isPublic(), 'Constructor should not be public if it exists');
+            $this->assertFalse($constructor->isPublic(), 'Constructor should not be public if it exists');
 
             $instance = $reflection->newInstanceWithoutConstructor();
             $constructor->setAccessible(true);
             $constructor->invoke($instance);
 
-            self::assertInstanceOf(FileComparator::class, $instance);
+            $this->assertInstanceOf(FileComparator::class, $instance);
         }
     }
 
@@ -58,7 +68,7 @@ final class FileComparatorTest extends TestCase
         $file1 = $this->createFile('file1.txt', 'same content');
         $file2 = $this->createFile('file2.txt', 'same content');
 
-        self::assertTrue(FileComparator::areIdentical($file1, $file2));
+        $this->assertTrue(FileComparator::areIdentical($file1, $file2));
     }
 
     public function testAreIdenticalReturnsFalseForDifferentFiles(): void
@@ -66,23 +76,23 @@ final class FileComparatorTest extends TestCase
         $file1 = $this->createFile('file1.txt', 'alpha');
         $file2 = $this->createFile('file2.txt', 'beta');
 
-        self::assertFalse(FileComparator::areIdentical($file1, $file2));
+        $this->assertFalse(FileComparator::areIdentical($file1, $file2));
     }
 
     public function testGetHashReturnsExpectedSha256Hash(): void
     {
-        $file = $this->createFile('hash.txt', 'content to hash');
+        $file         = $this->createFile('hash.txt', 'content to hash');
         $expectedHash = \hash_file(Config::DEFAULT_ALGORITHM, $file);
 
-        self::assertIsString($expectedHash);
-        self::assertSame($expectedHash, FileComparator::getHash($file));
+        $this->assertIsString($expectedHash);
+        $this->assertSame($expectedHash, FileComparator::getHash($file));
     }
 
     public function testGetHashThrowsWhenFileDoesNotExist(): void
     {
         $missingFile = $this->tempRoot . \DIRECTORY_SEPARATOR . 'missing.txt';
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('File not found');
 
         FileComparator::getHash($missingFile);
@@ -91,15 +101,15 @@ final class FileComparatorTest extends TestCase
     public function testGetHashThrowsWhenFileIsNotReadableFile(): void
     {
         $file = $this->createFile('locked.txt', 'secret');
-        $this->assertTrue(\is_readable($file));
+        $this->assertIsReadable($file);
 
-        self::assertTrue(\chmod($file, 0000));
+        $this->assertTrue(\chmod($file, 0000));
 
         if (\is_readable($file)) {
             $this->markTestSkipped('Running as a user that can read chmod 0000 files');
         }
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('File is not readable');
 
         FileComparator::getHash($file);
@@ -108,16 +118,16 @@ final class FileComparatorTest extends TestCase
     public function testGetHashThrowsWhenHashCalculationFails(): void
     {
         $directory = $this->tempRoot . \DIRECTORY_SEPARATOR . 'directory';
-        self::assertTrue(\mkdir($directory));
+        $this->assertTrue(\mkdir($directory));
 
         \set_error_handler(static fn (): bool => true, \E_NOTICE);
 
         try {
             try {
                 FileComparator::getHash($directory);
-                self::fail('Expected RuntimeException was not thrown');
-            } catch (\RuntimeException $exception) {
-                self::assertStringContainsString(
+                $this->fail('Expected RuntimeException was not thrown');
+            } catch (RuntimeException $exception) {
+                $this->assertStringContainsString(
                     'Failed to calculate sha256 hash',
                     $exception->getMessage(),
                 );
@@ -129,17 +139,17 @@ final class FileComparatorTest extends TestCase
 
     public function testMatchesHashReturnsTrueWhenHashMatches(): void
     {
-        $file = $this->createFile('match.txt', 'match me');
+        $file         = $this->createFile('match.txt', 'match me');
         $expectedHash = FileComparator::getHash($file);
 
-        self::assertTrue(FileComparator::matchesHash($file, $expectedHash));
+        $this->assertTrue(FileComparator::matchesHash($file, $expectedHash));
     }
 
     public function testMatchesHashReturnsFalseWhenHashDoesNotMatch(): void
     {
         $file = $this->createFile('mismatch.txt', 'mismatch me');
 
-        self::assertFalse(FileComparator::matchesHash($file, \str_repeat('a', 64)));
+        $this->assertFalse(FileComparator::matchesHash($file, \str_repeat('a', 64)));
     }
 
     public function testAreAllIdenticalReturnsTrueWhenAllFilesMatch(): void
@@ -150,7 +160,7 @@ final class FileComparatorTest extends TestCase
             $this->createFile('three.txt', 'same'),
         ];
 
-        self::assertTrue(FileComparator::areAllIdentical($files));
+        $this->assertTrue(FileComparator::areAllIdentical($files));
     }
 
     public function testAreAllIdenticalReturnsFalseWhenOneFileDiffers(): void
@@ -161,14 +171,14 @@ final class FileComparatorTest extends TestCase
             $this->createFile('three.txt', 'different'),
         ];
 
-        self::assertFalse(FileComparator::areAllIdentical($files));
+        $this->assertFalse(FileComparator::areAllIdentical($files));
     }
 
     public function testAreAllIdenticalThrowsWhenLessThanTwoFilesProvided(): void
     {
         $file = $this->createFile('single.txt', 'single');
 
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('At least 2 files required for comparison');
 
         FileComparator::areAllIdentical([$file]);
@@ -178,38 +188,39 @@ final class FileComparatorTest extends TestCase
     {
         $algorithms = FileComparator::getSupportedAlgorithms();
 
-        self::assertIsArray($algorithms);
-        self::assertContains(Config::DEFAULT_ALGORITHM, $algorithms);
+        $this->assertContains(Config::DEFAULT_ALGORITHM, $algorithms);
     }
 
     private function createFile(string $name, string $contents): string
     {
         $path = $this->tempRoot . \DIRECTORY_SEPARATOR . $name;
 
-        self::assertNotFalse(\file_put_contents($path, $contents));
+        $this->assertNotFalse(\file_put_contents($path, $contents));
 
         return $path;
     }
 
     private function removeDirectory(string $path): void
     {
-        if ('' === $path || !\file_exists($path)) {
+        if ('' === $path || ! \file_exists($path)) {
             return;
         }
 
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST,
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST,
         );
 
         foreach ($iterator as $item) {
-            if ($item->isDir()) {
-                \rmdir($item->getPathname());
+            if ($item instanceof SplFileInfo) {
+                if ($item->isDir()) {
+                    \rmdir($item->getPathname());
 
-                continue;
+                    continue;
+                }
+
+                \unlink($item->getPathname());
             }
-
-            \unlink($item->getPathname());
         }
 
         \rmdir($path);

@@ -15,25 +15,29 @@ namespace CiHispano\Tests\Unit\Util;
 use CiHispano\Util\PathBuilder;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
+/**
+ * @internal
+ */
 final class PathBuilderTest extends TestCase
 {
     public function testClassCannotBeInstantiated(): void
     {
-        $reflection = new \ReflectionClass(PathBuilder::class);
+        $reflection = new ReflectionClass(PathBuilder::class);
 
-        self::assertTrue($reflection->isFinal(), 'Class should be final');
+        $this->assertTrue($reflection->isFinal(), 'Class should be final');
 
         $constructor = $reflection->getConstructor();
 
         if ($constructor !== null) {
-            self::assertFalse($constructor->isPublic(), 'Constructor should not be public if it exists');
+            $this->assertFalse($constructor->isPublic(), 'Constructor should not be public if it exists');
 
             $instance = $reflection->newInstanceWithoutConstructor();
             $constructor->setAccessible(true);
             $constructor->invoke($instance);
 
-            self::assertInstanceOf(PathBuilder::class, $instance);
+            $this->assertInstanceOf(PathBuilder::class, $instance);
         }
     }
 
@@ -41,7 +45,7 @@ final class PathBuilderTest extends TestCase
     {
         $result = PathBuilder::join('project' . \DIRECTORY_SEPARATOR . 'src', 'index.php');
 
-        self::assertSame(
+        $this->assertSame(
             'project' . \DIRECTORY_SEPARATOR . 'src' . \DIRECTORY_SEPARATOR . 'index.php',
             $result,
         );
@@ -51,7 +55,7 @@ final class PathBuilderTest extends TestCase
     {
         $result = PathBuilder::join('foo/bar\\baz/', '/qux/test.php');
 
-        self::assertSame(
+        $this->assertSame(
             'foo' . \DIRECTORY_SEPARATOR .
             'bar' . \DIRECTORY_SEPARATOR .
             'baz' . \DIRECTORY_SEPARATOR .
@@ -63,14 +67,14 @@ final class PathBuilderTest extends TestCase
 
     public function testJoinSupportsStreamWrappers(): void
     {
-        self::assertSame('vfs://root/hooks/pre-commit', PathBuilder::join('vfs://root/hooks/', '/pre-commit'));
+        $this->assertSame('vfs://root/hooks/pre-commit', PathBuilder::join('vfs://root/hooks/', '/pre-commit'));
     }
 
     public function testNormalizeRemovesTrailingSeparator(): void
     {
         $result = PathBuilder::normalize('foo/bar\\baz/');
 
-        self::assertSame(
+        $this->assertSame(
             'foo' . \DIRECTORY_SEPARATOR . 'bar' . \DIRECTORY_SEPARATOR . 'baz',
             $result,
         );
@@ -78,17 +82,17 @@ final class PathBuilderTest extends TestCase
 
     public function testNormalizeKeepsStreamWrapperFormat(): void
     {
-        self::assertSame('vfs://root/hooks', PathBuilder::normalize('vfs://root/hooks/'));
+        $this->assertSame('vfs://root/hooks', PathBuilder::normalize('vfs://root/hooks/'));
     }
 
     public function testCanonicalizeKeepsStreamWrapperFormat(): void
     {
-        self::assertSame('vfs://root/hooks', PathBuilder::canonicalize('vfs://root/hooks/'));
+        $this->assertSame('vfs://root/hooks', PathBuilder::canonicalize('vfs://root/hooks/'));
     }
 
     public function testCanonicalizeResolvesDotSegmentsInAbsolutePath(): void
     {
-        self::assertSame(
+        $this->assertSame(
             \DIRECTORY_SEPARATOR . 'var' . \DIRECTORY_SEPARATOR . 'www' . \DIRECTORY_SEPARATOR . 'project',
             PathBuilder::canonicalize('/var/www/./project/../project'),
         );
@@ -96,7 +100,7 @@ final class PathBuilderTest extends TestCase
 
     public function testCanonicalizeResolvesWindowsDrivePrefix(): void
     {
-        self::assertSame(
+        $this->assertSame(
             'C:' . \DIRECTORY_SEPARATOR . 'src',
             PathBuilder::canonicalize('C:\\project\\..\\src'),
         );
@@ -104,7 +108,7 @@ final class PathBuilderTest extends TestCase
 
     public function testCanonicalizePreservesLeadingDoubleDotsInRelativePath(): void
     {
-        self::assertSame(
+        $this->assertSame(
             '..' . \DIRECTORY_SEPARATOR . 'pre-commit',
             PathBuilder::canonicalize('../hooks/../pre-commit'),
         );
@@ -112,20 +116,20 @@ final class PathBuilderTest extends TestCase
 
     public function testCanonicalizeKeepsEmptyPathEmpty(): void
     {
-        self::assertSame('', PathBuilder::canonicalize(''));
+        $this->assertSame('', PathBuilder::canonicalize(''));
     }
 
     public function testCanonicalizeResolvesCollapsingPathToCurrentDirectory(): void
     {
-        self::assertSame('.', PathBuilder::canonicalize('hooks/..'));
-        self::assertSame('.', PathBuilder::canonicalize('./'));
+        $this->assertSame('.', PathBuilder::canonicalize('hooks/..'));
+        $this->assertSame('.', PathBuilder::canonicalize('./'));
     }
 
     public function testJoinMultipleBuildsPathFromSeveralSegments(): void
     {
         $result = PathBuilder::joinMultiple('foo/bar/', '\\baz', 'hooks', 'pre-commit');
 
-        self::assertSame(
+        $this->assertSame(
             'foo' . \DIRECTORY_SEPARATOR .
             'bar' . \DIRECTORY_SEPARATOR .
             'baz' . \DIRECTORY_SEPARATOR .
@@ -137,42 +141,42 @@ final class PathBuilderTest extends TestCase
 
     public function testJoinMultipleReturnsEmptyStringWithoutSegments(): void
     {
-        self::assertSame('', PathBuilder::joinMultiple());
+        $this->assertSame('', PathBuilder::joinMultiple());
     }
 
-    #[DataProvider('absolutePathProvider')]
+    #[DataProvider('provideIsAbsoluteDetectsAbsolutePaths')]
     public function testIsAbsoluteDetectsAbsolutePaths(string $path): void
     {
-        self::assertTrue(PathBuilder::isAbsolute($path));
-    }
-
-    #[DataProvider('relativePathProvider')]
-    public function testIsAbsoluteReturnsFalseForRelativePaths(string $path): void
-    {
-        self::assertFalse(PathBuilder::isAbsolute($path));
+        $this->assertTrue(PathBuilder::isAbsolute($path));
     }
 
     /**
      * @return array<string, array{0: string}>
      */
-    public static function absolutePathProvider(): array
+    public static function provideIsAbsoluteDetectsAbsolutePaths(): iterable
     {
         return [
-            'unix path' => ['/var/www/project'],
-            'windows backslashes' => ['C:\\projects\\repo'],
+            'unix path'               => ['/var/www/project'],
+            'windows backslashes'     => ['C:\\projects\\repo'],
             'windows forward slashes' => ['D:/projects/repo'],
         ];
     }
 
+    #[DataProvider('provideIsAbsoluteReturnsFalseForRelativePaths')]
+    public function testIsAbsoluteReturnsFalseForRelativePaths(string $path): void
+    {
+        $this->assertFalse(PathBuilder::isAbsolute($path));
+    }
+
     /**
      * @return array<string, array{0: string}>
      */
-    public static function relativePathProvider(): array
+    public static function provideIsAbsoluteReturnsFalseForRelativePaths(): iterable
     {
         return [
             'simple relative path' => ['src/Hooks/pre-commit'],
-            'dot relative path' => ['./src/Hooks'],
-            'bare segment' => ['hooks'],
+            'dot relative path'    => ['./src/Hooks'],
+            'bare segment'         => ['hooks'],
         ];
     }
 }

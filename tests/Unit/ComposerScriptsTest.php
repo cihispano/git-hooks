@@ -15,15 +15,27 @@ namespace CiHispano\Tests\Unit;
 use CiHispano\ComposerScripts;
 use CiHispano\Config;
 use CiHispano\ConsoleLogger;
+use CiHispano\Tests\Exceptions\AssertionsException;
 use CiHispano\Util\FilePermissions;
-use PHPUnit\Framework\TestCase;
+use Closure;
+use FilesystemIterator;
 use org\bovigo\vfs\vfsStream;
 use org\bovigo\vfs\vfsStreamDirectory;
+use PHPUnit\Framework\TestCase;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use ReflectionMethod;
+use RuntimeException;
+use SplFileInfo;
 
+/**
+ * @internal
+ */
 final class ComposerScriptsTest extends TestCase
 {
-    private string $tempRoot;
+    use AssertionsException;
 
+    private string $tempRoot;
     private string $originalCwd;
 
     /**
@@ -34,13 +46,16 @@ final class ComposerScriptsTest extends TestCase
     protected function setUp(): void
     {
         $this->originalCwd = \getcwd() ?: __DIR__;
-        $this->tempRoot = \sys_get_temp_dir() .
+        $this->tempRoot    = \sys_get_temp_dir() .
             \DIRECTORY_SEPARATOR . 'cihispano-composer-scripts-' . \bin2hex(\random_bytes(8));
 
-        self::assertTrue(\mkdir($this->tempRoot, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($this->tempRoot, FilePermissions::DIR_DEFAULT, true));
 
-        $this->output = \fopen('php://memory', 'r+');
-        ConsoleLogger::setOutputStream($this->output);
+        $stream = \fopen('php://memory', 'r+b');
+        $this->assertIsResource($stream);
+
+        $this->output = $stream;
+        ConsoleLogger::setOutputStream($stream);
     }
 
     protected function tearDown(): void
@@ -55,16 +70,18 @@ final class ComposerScriptsTest extends TestCase
     {
         $projectRoot = $this->createProjectStructure();
 
-        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
 
         $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
-        self::assertDirectoryExists($projectRoot . \DIRECTORY_SEPARATOR . Config::BUILD_DIR);
-        self::assertDirectoryExists($hooksDir);
+        $this->assertDirectoryExists($projectRoot . \DIRECTORY_SEPARATOR . Config::BUILD_DIR);
+        $this->assertDirectoryExists($hooksDir);
 
         foreach (Config::DEFAULT_HOOKS as $hook) {
-            self::assertFileExists($hooksDir . \DIRECTORY_SEPARATOR . $hook);
-            self::assertSame(
+            $this->assertFileExists($hooksDir . \DIRECTORY_SEPARATOR . $hook);
+            $this->assertSame(
                 \file_get_contents(
                     $projectRoot . \DIRECTORY_SEPARATOR .
                     Config::SRC_DIR . \DIRECTORY_SEPARATOR .
@@ -78,9 +95,9 @@ final class ComposerScriptsTest extends TestCase
     public function testInstallKeepsExistingIdenticalHookContent(): void
     {
         $projectRoot = $this->createProjectStructure();
-        $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
+        $hooksDir    = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
-        self::assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
 
         $sourceHook = $projectRoot . \DIRECTORY_SEPARATOR .
             Config::SRC_DIR . \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR . \DIRECTORY_SEPARATOR . 'pre-commit';
@@ -89,24 +106,28 @@ final class ComposerScriptsTest extends TestCase
         \copy($sourceHook, $destinationHook);
         $originalContents = \file_get_contents($destinationHook);
 
-        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
 
-        self::assertSame($originalContents, \file_get_contents($destinationHook));
+        $this->assertSame($originalContents, \file_get_contents($destinationHook));
     }
 
     public function testInstallOverwritesDifferentExistingHook(): void
     {
         $projectRoot = $this->createProjectStructure();
-        $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
+        $hooksDir    = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
-        self::assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
 
         $destinationHook = $hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit';
         \file_put_contents($destinationHook, '# stale hook');
 
-        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
 
-        self::assertSame(
+        $this->assertSame(
             \file_get_contents(
                 $projectRoot . \DIRECTORY_SEPARATOR .
                 Config::SRC_DIR . \DIRECTORY_SEPARATOR .
@@ -120,19 +141,21 @@ final class ComposerScriptsTest extends TestCase
     {
         $projectRoot = $this->createConsumerStructure();
 
-        self::assertDirectoryExists($this->packageHooksSourceDir());
+        $this->assertDirectoryExists($this->packageHooksSourceDir());
 
         foreach (Config::DEFAULT_HOOKS as $hook) {
-            self::assertFileExists($this->packageHooksSourceDir() . \DIRECTORY_SEPARATOR . $hook);
+            $this->assertFileExists($this->packageHooksSourceDir() . \DIRECTORY_SEPARATOR . $hook);
         }
 
-        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
 
         $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
         foreach (Config::DEFAULT_HOOKS as $hook) {
-            self::assertFileExists($hooksDir . \DIRECTORY_SEPARATOR . $hook);
-            self::assertSame(
+            $this->assertFileExists($hooksDir . \DIRECTORY_SEPARATOR . $hook);
+            $this->assertSame(
                 \file_get_contents(
                     $this->packageHooksSourceDir() . \DIRECTORY_SEPARATOR . $hook,
                 ),
@@ -141,11 +164,50 @@ final class ComposerScriptsTest extends TestCase
         }
     }
 
+    public function testInstallAbortsOutsideGitRepositoryWithoutCreatingArtifacts(): void
+    {
+        $projectRoot = $this->tempRoot . \DIRECTORY_SEPARATOR . 'plain-' . \bin2hex(\random_bytes(4));
+
+        $this->assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
+
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
+
+        $this->assertDirectoryDoesNotExist($projectRoot . \DIRECTORY_SEPARATOR . '.git');
+        $this->assertDirectoryDoesNotExist($projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR);
+
+        \rewind($this->output);
+        $output = \stream_get_contents($this->output);
+        $this->assertStringContainsString('not a Git repository', $output);
+        $this->assertStringNotContainsString('Installing Git Hooks', $output);
+        $this->assertStringNotContainsString('Git hooks installed successfully', $output);
+        $this->assertStringNotContainsString('Hooks will run automatically', $output);
+    }
+
+    public function testInstallAbortsWhenCalledFromNonGitCwd(): void
+    {
+        $projectRoot = $this->tempRoot . \DIRECTORY_SEPARATOR . 'plain-cwd-' . \bin2hex(\random_bytes(4));
+
+        $this->assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
+
+        $this->runOutsideGitRepository($projectRoot, static function (): void {
+            ComposerScripts::install();
+        });
+
+        $this->assertDirectoryDoesNotExist($projectRoot . \DIRECTORY_SEPARATOR . '.git');
+
+        \rewind($this->output);
+        $output = \stream_get_contents($this->output);
+        $this->assertStringContainsString('not a Git repository', $output);
+        $this->assertStringNotContainsString('Git hooks installed successfully', $output);
+    }
+
     public function testInstallThrowsWhenBasePathDoesNotExist(): void
     {
         $missingPath = $this->tempRoot . \DIRECTORY_SEPARATOR . 'missing-project';
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Base path does not exist or is not a directory');
 
         ComposerScripts::install($missingPath);
@@ -156,7 +218,7 @@ final class ComposerScriptsTest extends TestCase
         $projectRoot = $this->createProjectStructure();
         \file_put_contents($projectRoot . \DIRECTORY_SEPARATOR . Config::BUILD_DIR, 'not a directory');
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Failed to create build directory');
 
         \set_error_handler(static fn (): bool => true);
@@ -175,36 +237,44 @@ final class ComposerScriptsTest extends TestCase
         try {
             $this->runOutsideGitRepository(
                 $this->tempRoot,
-                static fn (): mixed => ComposerScripts::install($root->url()),
+                static function () use ($root): void {
+                    ComposerScripts::install($root->url());
+                },
             );
-            self::fail('Expected install() to fail when .git/hooks cannot be created.');
-        } catch (\RuntimeException $exception) {
-            self::assertSame('Failed to install git hooks. Check the errors above.', $exception->getMessage());
-            self::assertStringContainsString(
+            $this->fail('Expected install() to fail when .git/hooks cannot be created.');
+        } catch (RuntimeException $exception) {
+            $this->assertWrappedException(
+                $exception,
+                'Failed to install git hooks. Check the errors above.',
                 'Git hooks directory not found and could not be created',
-                $exception->getPrevious()?->getMessage() ?? '',
             );
         }
     }
 
     public function testInstallWrapsFailureWhenHooksDirectoryIsNotWritable(): void
     {
-        $root = $this->createVfsProjectStructure();
-        $hooksDir = vfsStream::newDirectory('hooks', FilePermissions::DIR_READ_ONLY)->at($root->getChild('.git'));
+        $root   = $this->createVfsProjectStructure();
+        $gitDir = $root->getChild('.git');
 
-        self::assertFalse(\is_writable($hooksDir->url()));
+        $this->assertInstanceOf(vfsStreamDirectory::class, $gitDir);
+
+        $hooksDir = vfsStream::newDirectory('hooks', FilePermissions::DIR_READ_ONLY)->at($gitDir);
+
+        $this->assertIsNotWritable($hooksDir->url());
 
         try {
             $this->runOutsideGitRepository(
                 $this->tempRoot,
-                static fn (): mixed => ComposerScripts::install($root->url()),
+                static function () use ($root): void {
+                    ComposerScripts::install($root->url());
+                },
             );
-            self::fail('Expected install() to fail when .git/hooks is not writable.');
-        } catch (\RuntimeException $exception) {
-            self::assertSame('Failed to install git hooks. Check the errors above.', $exception->getMessage());
-            self::assertStringContainsString(
+            $this->fail('Expected install() to fail when .git/hooks is not writable.');
+        } catch (RuntimeException $exception) {
+            $this->assertWrappedException(
+                $exception,
+                'Failed to install git hooks. Check the errors above.',
                 'Git hooks directory is not writable',
-                $exception->getPrevious()?->getMessage() ?? '',
             );
         }
     }
@@ -214,17 +284,23 @@ final class ComposerScriptsTest extends TestCase
         $projectRoot = $this->createConsumerStructure(true);
         $mainRepo    = $this->tempRoot . \DIRECTORY_SEPARATOR . 'main-repo';
 
-        self::assertTrue(\mkdir($mainRepo, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($mainRepo, FilePermissions::DIR_DEFAULT, true));
 
         $commonGitDir = $mainRepo . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
-        self::assertTrue(\mkdir($commonGitDir, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($commonGitDir, FilePermissions::DIR_DEFAULT, true));
 
         $worktreeGitDir = $mainRepo .
             \DIRECTORY_SEPARATOR . '.git' . \DIRECTORY_SEPARATOR .
             'worktrees' . \DIRECTORY_SEPARATOR . 'wt';
 
-        self::assertTrue(\mkdir($mainRepo . \DIRECTORY_SEPARATOR . '.git' . \DIRECTORY_SEPARATOR . 'worktrees', FilePermissions::DIR_DEFAULT, true));
-        self::assertTrue(\mkdir($worktreeGitDir, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(
+            \mkdir(
+                $mainRepo . \DIRECTORY_SEPARATOR . '.git' . \DIRECTORY_SEPARATOR . 'worktrees',
+                FilePermissions::DIR_DEFAULT,
+                true,
+            ),
+        );
+        $this->assertTrue(\mkdir($worktreeGitDir, FilePermissions::DIR_DEFAULT, true));
 
         \file_put_contents(
             $projectRoot . \DIRECTORY_SEPARATOR . '.git',
@@ -233,10 +309,12 @@ final class ComposerScriptsTest extends TestCase
 
         \file_put_contents($worktreeGitDir . \DIRECTORY_SEPARATOR . 'commondir', '../..' . PHP_EOL);
 
-        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
 
         foreach (Config::DEFAULT_HOOKS as $hook) {
-            self::assertFileExists($commonGitDir . \DIRECTORY_SEPARATOR . $hook);
+            $this->assertFileExists($commonGitDir . \DIRECTORY_SEPARATOR . $hook);
         }
     }
 
@@ -244,49 +322,61 @@ final class ComposerScriptsTest extends TestCase
     {
         $projectRoot = $this->createProjectStructure();
 
-        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
 
         $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
         \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit.sample', 'sample');
         \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . '.keep', 'hidden');
 
-        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::uninstall($projectRoot));
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::uninstall($projectRoot);
+        });
 
         foreach (Config::DEFAULT_HOOKS as $hook) {
-            self::assertFileDoesNotExist($hooksDir . \DIRECTORY_SEPARATOR . $hook);
+            $this->assertFileDoesNotExist($hooksDir . \DIRECTORY_SEPARATOR . $hook);
         }
 
-        self::assertFileExists($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit.sample');
-        self::assertFileExists($hooksDir . \DIRECTORY_SEPARATOR . '.keep');
+        $this->assertFileExists($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit.sample');
+        $this->assertFileExists($hooksDir . \DIRECTORY_SEPARATOR . '.keep');
     }
 
     public function testUninstallDoesNothingWhenHooksDirectoryIsMissing(): void
     {
         $projectRoot = $this->createProjectStructure();
 
-        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::uninstall($projectRoot));
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::uninstall($projectRoot);
+        });
 
-        self::assertDirectoryDoesNotExist($projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR);
+        $this->assertDirectoryDoesNotExist($projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR);
     }
 
     public function testUninstallWrapsFailureWhenHooksDirectoryCannotBeRead(): void
     {
-        $root = $this->createVfsProjectStructure();
-        $hooksDir = vfsStream::newDirectory('hooks', FilePermissions::DIR_NO_ACCESS)->at($root->getChild('.git'));
+        $root   = $this->createVfsProjectStructure();
+        $gitDir = $root->getChild('.git');
 
-        self::assertFalse(\is_readable($hooksDir->url()));
+        $this->assertInstanceOf(vfsStreamDirectory::class, $gitDir);
+
+        $hooksDir = vfsStream::newDirectory('hooks', FilePermissions::DIR_NO_ACCESS)->at($gitDir);
+
+        $this->assertIsNotReadable($hooksDir->url());
 
         try {
             $this->runOutsideGitRepository(
                 $this->tempRoot,
-                static fn (): mixed => ComposerScripts::uninstall($root->url()),
+                static function () use ($root): void {
+                    ComposerScripts::uninstall($root->url());
+                },
             );
-            self::fail('Expected uninstall() to fail when the hooks directory cannot be read.');
-        } catch (\RuntimeException $exception) {
-            self::assertSame('Failed to uninstall git hooks', $exception->getMessage());
-            self::assertStringContainsString(
+            $this->fail('Expected uninstall() to fail when the hooks directory cannot be read.');
+        } catch (RuntimeException $exception) {
+            $this->assertWrappedException(
+                $exception,
+                'Failed to uninstall git hooks',
                 'Failed to read git hooks directory',
-                $exception->getPrevious()?->getMessage() ?? '',
             );
         }
     }
@@ -302,7 +392,7 @@ final class ComposerScriptsTest extends TestCase
         });
 
         foreach (Config::DEFAULT_HOOKS as $hook) {
-            self::assertFileExists(
+            $this->assertFileExists(
                 $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR . \DIRECTORY_SEPARATOR . $hook,
             );
         }
@@ -312,7 +402,9 @@ final class ComposerScriptsTest extends TestCase
     {
         $projectRoot = $this->createProjectStructure();
 
-        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
 
         $installedHook = $projectRoot .
             \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR . \DIRECTORY_SEPARATOR . 'pre-push';
@@ -325,7 +417,7 @@ final class ComposerScriptsTest extends TestCase
             return null;
         });
 
-        self::assertSame(
+        $this->assertSame(
             \file_get_contents(
                 $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR . \DIRECTORY_SEPARATOR . 'pre-push',
             ),
@@ -337,36 +429,36 @@ final class ComposerScriptsTest extends TestCase
     {
         $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
-        self::assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
         \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit', 'hook');
         \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit.sample', 'sample');
         \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . '.hidden', 'hidden');
-        self::assertTrue(\mkdir($hooksDir . \DIRECTORY_SEPARATOR . 'nested'));
+        $this->assertTrue(\mkdir($hooksDir . \DIRECTORY_SEPARATOR . 'nested'));
 
         $result = $this->invokePrivateStaticMethod(ComposerScripts::class, 'getExistingHookFiles', [$hooksDir]);
 
-        self::assertSame(['pre-commit'], $result);
+        $this->assertSame(['pre-commit'], $result);
     }
 
     public function testPrivateRemoveSingleHookSkipsMissingFiles(): void
     {
         $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
-        self::assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
 
         $this->invokePrivateStaticMethod(ComposerScripts::class, 'removeSingleHook', ['pre-commit', $hooksDir]);
 
-        self::assertFileDoesNotExist($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit');
+        $this->assertFileDoesNotExist($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit');
     }
 
     public function testPrivateInstallSingleHookThrowsWhenSourceFileIsMissing(): void
     {
         $projectRoot = $this->createProjectStructure();
-        $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
+        $hooksDir    = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
-        self::assertTrue(\mkdir($hooksDir, FilePermissions::DIR_WORLD_WRITABLE, true));
+        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_WORLD_WRITABLE, true));
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Source hook file not found');
 
         $this->invokePrivateStaticMethod(ComposerScripts::class, 'installSingleHook', ['missing-hook', $projectRoot]);
@@ -376,7 +468,7 @@ final class ComposerScriptsTest extends TestCase
     {
         $projectRoot = $this->createProjectStructure();
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Failed to copy hook: pre-commit');
 
         \set_error_handler(static fn (): bool => true);
@@ -399,11 +491,11 @@ final class ComposerScriptsTest extends TestCase
     {
         $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
-        self::assertTrue(
+        $this->assertTrue(
             \mkdir($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit', FilePermissions::DIR_DEFAULT, true),
         );
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Failed to remove hook: pre-commit');
 
         $this->invokePrivateStaticMethod(ComposerScripts::class, 'removeSingleHook', ['pre-commit', $hooksDir]);
@@ -413,9 +505,9 @@ final class ComposerScriptsTest extends TestCase
     {
         $detectedPath = $this->invokePrivateStaticMethod(ComposerScripts::class, 'getGitHooksDir', [null]);
 
-        self::assertIsString($detectedPath);
-        self::assertNotSame('', $detectedPath);
-        self::assertStringEndsWith(
+        $this->assertIsString($detectedPath);
+        $this->assertNotSame('', $detectedPath);
+        $this->assertStringEndsWith(
             Config::GIT_HOOKS_DIR,
             \str_replace(['/', '\\'], \DIRECTORY_SEPARATOR, $detectedPath),
         );
@@ -423,15 +515,15 @@ final class ComposerScriptsTest extends TestCase
 
     private function createProjectStructure(bool $withHooks = true): string
     {
-        $projectRoot = $this->tempRoot . \DIRECTORY_SEPARATOR . 'project-' . \bin2hex(\random_bytes(4));
+        $projectRoot    = $this->tempRoot . \DIRECTORY_SEPARATOR . 'project-' . \bin2hex(\random_bytes(4));
         $hooksSourceDir = $projectRoot .
             \DIRECTORY_SEPARATOR . Config::SRC_DIR . \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR;
 
-        self::assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
-        self::assertTrue(\mkdir($projectRoot . \DIRECTORY_SEPARATOR . '.git', FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($projectRoot . \DIRECTORY_SEPARATOR . '.git', FilePermissions::DIR_DEFAULT, true));
 
         if ($withHooks) {
-            self::assertTrue(\mkdir($hooksSourceDir, FilePermissions::DIR_DEFAULT, true));
+            $this->assertTrue(\mkdir($hooksSourceDir, FilePermissions::DIR_DEFAULT, true));
 
             foreach (Config::DEFAULT_HOOKS as $hook) {
                 \copy(
@@ -450,13 +542,13 @@ final class ComposerScriptsTest extends TestCase
     {
         $projectRoot = $this->tempRoot . \DIRECTORY_SEPARATOR . 'consumer-' . \bin2hex(\random_bytes(4));
 
-        self::assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
 
         if ($withGitFile) {
             return $projectRoot;
         }
 
-        self::assertTrue(\mkdir($projectRoot . \DIRECTORY_SEPARATOR . '.git', FilePermissions::DIR_DEFAULT, true));
+        $this->assertTrue(\mkdir($projectRoot . \DIRECTORY_SEPARATOR . '.git', FilePermissions::DIR_DEFAULT, true));
 
         return $projectRoot;
     }
@@ -481,7 +573,7 @@ final class ComposerScriptsTest extends TestCase
         }
 
         if ($withHooks) {
-            $hooksRoot = vfsStream::newDirectory(Config::SRC_DIR)->at($root);
+            $hooksRoot   = vfsStream::newDirectory(Config::SRC_DIR)->at($root);
             $hooksSource = vfsStream::newDirectory(Config::HOOKS_SOURCE_DIR)->at($hooksRoot);
 
             foreach (Config::DEFAULT_HOOKS as $hook) {
@@ -497,11 +589,11 @@ final class ComposerScriptsTest extends TestCase
     /**
      * @template T
      *
-     * @param \Closure():T $callback
+     * @param Closure():T $callback
      *
      * @return T
      */
-    private function runOutsideGitRepository(string $projectRoot, \Closure $callback): mixed
+    private function runOutsideGitRepository(string $projectRoot, Closure $callback): mixed
     {
         \chdir($projectRoot);
 
@@ -517,30 +609,32 @@ final class ComposerScriptsTest extends TestCase
      */
     private function invokePrivateStaticMethod(string $className, string $methodName, array $arguments): mixed
     {
-        $reflection = new \ReflectionMethod($className, $methodName);
+        $reflection = new ReflectionMethod($className, $methodName);
 
         return $reflection->invokeArgs(null, $arguments);
     }
 
     private function removeDirectory(string $path): void
     {
-        if ('' === $path || !\file_exists($path)) {
+        if ('' === $path || ! \file_exists($path)) {
             return;
         }
 
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST,
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST,
         );
 
         foreach ($iterator as $item) {
-            if ($item->isDir()) {
-                \rmdir($item->getPathname());
+            if ($item instanceof SplFileInfo) {
+                if ($item->isDir()) {
+                    \rmdir($item->getPathname());
 
-                continue;
+                    continue;
+                }
+
+                \unlink($item->getPathname());
             }
-
-            \unlink($item->getPathname());
         }
 
         \rmdir($path);

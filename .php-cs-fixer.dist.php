@@ -17,6 +17,7 @@ use PhpCsFixer\Finder;
 $finder = Finder::create()
     ->in([
         __DIR__ . '/src',
+        __DIR__ . '/tests',
     ])
     ->files()
     ->exclude([
@@ -38,6 +39,7 @@ return Factory::create(
     // CiHispano overrides on top of the CodeIgniter4 ruleset
     [
         'header_comment' => [
+            // phpcs:ignore Generic.Files.LineLength
             'header'       => "Copyright (c) 2026.\nThis file is part of CiHispano Git Hooks library.\n\n@copyright CiHispano <administracion@cihispano.org>\n@license For the full copyright and license information, see the LICENSE file distributed with this source code.",
             'comment_type' => 'comment',
             'separate'     => 'both',

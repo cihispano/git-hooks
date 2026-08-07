@@ -14,45 +14,32 @@ namespace CiHispano\Tests\Unit;
 
 use CiHispano\Config;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
+/**
+ * @internal
+ */
 final class ConfigTest extends TestCase
 {
-    public function testConfigConstantsHaveExpectedTypes(): void
-    {
-        self::assertIsString(Config::GIT_HOOKS_DIR);
-        self::assertIsString(Config::BUILD_DIR);
-        self::assertIsString(Config::SRC_DIR);
-        self::assertIsString(Config::HOOKS_SOURCE_DIR);
-        self::assertIsArray(Config::DEFAULT_HOOKS);
-        self::assertIsArray(Config::EXCLUDED_EXTENSIONS);
-        self::assertIsInt(Config::SEPARATOR_LENGTH);
-        self::assertIsString(Config::COLOR_SUCCESS);
-        self::assertIsString(Config::COLOR_ERROR);
-        self::assertIsString(Config::COLOR_WARNING);
-        self::assertIsString(Config::COLOR_INFO);
-        self::assertIsInt(Config::MAX_HOOK_FILE_SIZE);
-        self::assertIsString(Config::MIN_PHP_VERSION);
-    }
-
     public function testConfigConstantsHaveExpectedValues(): void
     {
-        self::assertSame('sha256', Config::DEFAULT_ALGORITHM);
-        self::assertSame('.git' . \DIRECTORY_SEPARATOR . 'hooks', Config::GIT_HOOKS_DIR);
-        self::assertSame('build', Config::BUILD_DIR);
-        self::assertSame('src', Config::SRC_DIR);
-        self::assertSame('Hooks', Config::HOOKS_SOURCE_DIR);
-        self::assertSame(50, Config::SEPARATOR_LENGTH);
-        self::assertSame('green', Config::COLOR_SUCCESS);
-        self::assertSame('red', Config::COLOR_ERROR);
-        self::assertSame('yellow', Config::COLOR_WARNING);
-        self::assertSame('cyan', Config::COLOR_INFO);
-        self::assertSame(1048576, Config::MAX_HOOK_FILE_SIZE);
-        self::assertSame('8.1.0', Config::MIN_PHP_VERSION);
+        $this->assertSame('sha256', Config::DEFAULT_ALGORITHM);
+        $this->assertSame('.git' . \DIRECTORY_SEPARATOR . 'hooks', Config::GIT_HOOKS_DIR);
+        $this->assertSame('build', Config::BUILD_DIR);
+        $this->assertSame('src', Config::SRC_DIR);
+        $this->assertSame('Hooks', Config::HOOKS_SOURCE_DIR);
+        $this->assertSame(50, Config::SEPARATOR_LENGTH);
+        $this->assertSame('green', Config::COLOR_SUCCESS);
+        $this->assertSame('red', Config::COLOR_ERROR);
+        $this->assertSame('yellow', Config::COLOR_WARNING);
+        $this->assertSame('cyan', Config::COLOR_INFO);
+        $this->assertSame(1048576, Config::MAX_HOOK_FILE_SIZE);
+        $this->assertSame('8.1.0', Config::MIN_PHP_VERSION);
     }
 
     public function testDefaultHooksContainExpectedHookNames(): void
     {
-        self::assertSame([
+        $this->assertSame([
             'pre-commit',
             'commit-msg',
             'pre-push',
@@ -61,7 +48,7 @@ final class ConfigTest extends TestCase
 
     public function testExcludedExtensionsContainExpectedEntries(): void
     {
-        self::assertSame([
+        $this->assertSame([
             '.sample',
             '.txt',
             '.md',
@@ -71,20 +58,20 @@ final class ConfigTest extends TestCase
 
     public function testClassCannotBeInstantiated(): void
     {
-        $reflection = new \ReflectionClass(Config::class);
+        $reflection = new ReflectionClass(Config::class);
 
-        self::assertTrue($reflection->isFinal(), 'Class should be final');
+        $this->assertTrue($reflection->isFinal(), 'Class should be final');
 
         $constructor = $reflection->getConstructor();
 
         if ($constructor !== null) {
-            self::assertFalse($constructor->isPublic(), 'Constructor should not be public if it exists');
+            $this->assertFalse($constructor->isPublic(), 'Constructor should not be public if it exists');
 
             $instance = $reflection->newInstanceWithoutConstructor();
             $constructor->setAccessible(true);
             $constructor->invoke($instance);
 
-            self::assertInstanceOf(Config::class, $instance);
+            $this->assertInstanceOf(Config::class, $instance);
         }
     }
 }

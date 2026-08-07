@@ -15,65 +15,89 @@ namespace CiHispano\Tests\Unit\Support;
 use CiHispano\Support\CliIcons;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
+/**
+ * @internal
+ */
 final class CliIconsTest extends TestCase
 {
     public function testSuccessIconIsCheckmark(): void
     {
-        self::assertSame('✔', CliIcons::SUCCESS);
+        $this->assertSame('✔', CliIcons::SUCCESS);
     }
 
     public function testErrorIconIsXMark(): void
     {
-        self::assertSame('✖', CliIcons::ERROR);
+        $this->assertSame('✖', CliIcons::ERROR);
     }
+
     public function testWarningIconIsWarningSign(): void
     {
-        self::assertSame('⚠', CliIcons::WARNING);
+        $this->assertSame('⚠', CliIcons::WARNING);
     }
+
     public function testInfoIconIsInformationSign(): void
     {
-        self::assertSame('ℹ', CliIcons::INFO);
+        $this->assertSame('ℹ', CliIcons::INFO);
     }
+
     public function testStepIconIsArrow(): void
     {
-        self::assertSame('➤', CliIcons::STEP);
+        $this->assertSame('➤', CliIcons::STEP);
     }
 
     public function testAskIconIsQuestionMark(): void
     {
-        self::assertSame('?', CliIcons::ASK);
+        $this->assertSame('?', CliIcons::ASK);
     }
 
     public function testBulletIconIsBulletPoint(): void
     {
-        self::assertSame('•', CliIcons::BULLET);
+        $this->assertSame('•', CliIcons::BULLET);
     }
 
     #[DataProvider('provideAllIcons')]
     public function testAllIconsAreNonEmptyStrings(string $iconValue): void
     {
-        self::assertNotEmpty($iconValue, 'Icon should not be empty');
-        self::assertIsString($iconValue, 'Icon should be a string');
+        $this->assertNotEmpty($iconValue, 'Icon should not be empty');
     }
 
     #[DataProvider('provideAllIcons')]
     public function testAllIconsAreSingleCharacterOrUnicode(string $iconValue): void
     {
-        $length = mb_strlen($iconValue, 'UTF-8');
-        self::assertGreaterThanOrEqual(1, $length, 'Icon should have at least 1 character');
-        self::assertLessThanOrEqual(3, $length, 'Icon should not exceed 3 characters (for emoji)');
+        $length = \mb_strlen($iconValue, 'UTF-8');
+        $this->assertGreaterThanOrEqual(1, $length, 'Icon should have at least 1 character');
+        $this->assertLessThanOrEqual(3, $length, 'Icon should not exceed 3 characters (for emoji)');
+    }
+
+    /**
+     * Data provider for all icon values.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function provideAllIcons(): iterable
+    {
+        return [
+            'SUCCESS' => [CliIcons::SUCCESS],
+            'ERROR'   => [CliIcons::ERROR],
+            'WARNING' => [CliIcons::WARNING],
+            'INFO'    => [CliIcons::INFO],
+            'STEP'    => [CliIcons::STEP],
+            'ASK'     => [CliIcons::ASK],
+            'BULLET'  => [CliIcons::BULLET],
+        ];
     }
 
     public function testClassCannotBeInstantiated(): void
     {
-        $reflection = new \ReflectionClass(CliIcons::class);
+        $reflection = new ReflectionClass(CliIcons::class);
 
-        self::assertTrue($reflection->isFinal(), 'Class should be final');
+        $this->assertTrue($reflection->isFinal(), 'Class should be final');
 
         $constructor = $reflection->getConstructor();
         if ($constructor !== null) {
-            self::assertFalse(
+            $this->assertFalse(
                 $constructor->isPublic(),
                 'Constructor should not be public if it exists',
             );
@@ -82,17 +106,17 @@ final class CliIconsTest extends TestCase
             $constructor->setAccessible(true);
             $constructor->invoke($instance);
 
-            self::assertInstanceOf(CliIcons::class, $instance);
+            $this->assertInstanceOf(CliIcons::class, $instance);
         }
     }
 
     public function testAllConstantsArePublic(): void
     {
-        $reflection = new \ReflectionClass(CliIcons::class);
-        $constants = $reflection->getReflectionConstants();
+        $reflection = new ReflectionClass(CliIcons::class);
+        $constants  = $reflection->getReflectionConstants();
 
         foreach ($constants as $constant) {
-            self::assertTrue(
+            $this->assertTrue(
                 $constant->isPublic(),
                 "Constant {$constant->getName()} should be public",
             );
@@ -101,11 +125,11 @@ final class CliIconsTest extends TestCase
 
     public function testAllConstantsContainStringValues(): void
     {
-        $reflection = new \ReflectionClass(CliIcons::class);
-        $constants = $reflection->getReflectionConstants();
+        $reflection = new ReflectionClass(CliIcons::class);
+        $constants  = $reflection->getReflectionConstants();
 
         foreach ($constants as $constant) {
-            self::assertIsString($constant->getValue(), "Constant {$constant->getName()} should be a string");
+            $this->assertIsString($constant->getValue(), "Constant {$constant->getName()} should be a string");
         }
     }
 
@@ -121,31 +145,13 @@ final class CliIconsTest extends TestCase
             CliIcons::BULLET,
         ];
 
-        $uniqueIcons = array_unique($icons);
+        $uniqueIcons = \array_unique($icons);
 
-        self::assertCount(
+        $this->assertCount(
             \count($icons),
             $uniqueIcons,
             'All icons should be unique/distinct from each other',
         );
-    }
-
-    /**
-     * Data provider for all icon values.
-     *
-     * @return array<string, array<string>>
-     */
-    public static function provideAllIcons(): array
-    {
-        return [
-            'SUCCESS' => [CliIcons::SUCCESS],
-            'ERROR' => [CliIcons::ERROR],
-            'WARNING' => [CliIcons::WARNING],
-            'INFO' => [CliIcons::INFO],
-            'STEP' => [CliIcons::STEP],
-            'ASK' => [CliIcons::ASK],
-            'BULLET' => [CliIcons::BULLET],
-        ];
     }
 
     /**
@@ -154,11 +160,11 @@ final class CliIconsTest extends TestCase
     public function testIconsCanBeConcatenatedWithStrings(): void
     {
         $message = CliIcons::SUCCESS . ' Operation completed';
-        self::assertStringContainsString('✔', $message);
-        self::assertStringContainsString('Operation completed', $message);
+        $this->assertStringContainsString('✔', $message);
+        $this->assertStringContainsString('Operation completed', $message);
 
         $errorMessage = CliIcons::ERROR . ' Something failed';
-        self::assertStringContainsString('✖', $errorMessage);
+        $this->assertStringContainsString('✖', $errorMessage);
     }
 
     /**
@@ -166,10 +172,10 @@ final class CliIconsTest extends TestCase
      */
     public function testIconsWorkWithStringInterpolation(): void
     {
-        $status = 'completed';
+        $status  = 'completed';
         $message = \sprintf('%s Status: %s', CliIcons::INFO, $status);
 
-        self::assertStringContainsString('ℹ', $message);
-        self::assertStringContainsString('Status: completed', $message);
+        $this->assertStringContainsString('ℹ', $message);
+        $this->assertStringContainsString('Status: completed', $message);
     }
 }

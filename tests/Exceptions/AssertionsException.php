@@ -13,11 +13,12 @@ declare(strict_types=1);
 namespace CiHispano\Tests\Exceptions;
 
 use PHPUnit\Framework\Assert;
+use RuntimeException;
 
 trait AssertionsException
 {
     protected function assertWrappedException(
-        \RuntimeException $exception,
+        RuntimeException $exception,
         string $rootMessage,
         string $previousContains,
     ): void {
