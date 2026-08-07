@@ -1,6 +1,7 @@
 stages:
   - validate
   - quality
+  - hooks
 
 workflow:
   rules:
@@ -45,6 +46,7 @@ quality:matrix:
   script:
     - composer test
     - composer analyze
+    - vendor/bin/phpunit --configuration phpunit.xml.dist --no-coverage --fail-on-skipped tests/Unit/HooksSmokeTest.php
 
 coding-style:php8.1:
   stage: quality
@@ -53,3 +55,9 @@ coding-style:php8.1:
   script:
     - composer sniff
     - composer cs
+
+hooks:shellcheck:
+  stage: hooks
+  image: koalaman/shellcheck-alpine:latest
+  script:
+    - shellcheck --severity=error src/Hooks/pre-commit src/Hooks/pre-push src/Hooks/commit-msg

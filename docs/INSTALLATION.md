@@ -89,6 +89,31 @@ you wrote on top of an installed hook will be preserved as long as the package h
 not change; after a package update the installed hook is refreshed. Re-apply your local
 edits after updates, or move them to a wrapper hook.
 
+## Local validation contract
+
+The project's CI (GitHub Actions and GitLab CI) runs exactly the same gates you get
+locally with the `composer` scripts. Before opening a merge request, replicate the CI
+from a clean state:
+
+```bash
+composer reset
+composer check:all
+```
+
+`composer reset` removes `vendor/` and QA caches (keeping `composer.lock` for
+reproducibility) and reinstalls; `composer check:all` runs **PHPStan 10**, **PHPCS**,
+**PHP CS Fixer**, and **PHPUnit**. In addition, CI validates that the distributed shell
+hooks pass `shellcheck` and that the hook smoke tests executed (they are never skipped),
+so the three gates are:
+
+| Gate | Local | CI |
+| ------ | ------- | ---- |
+| Static analysis (PHPStan, level 10) | `composer analyze` | `composer analyze` |
+| Standards (PHPCS + PHP CS Fixer) | `composer sniff` + `composer cs` | same |
+| Tests (PHPUnit) | `composer test` | `composer test` |
+| Hooks shell syntax + shellcheck | `sh -n src/Hooks/*` + `shellcheck` | job `hooks:` |
+| Hook smoke tests (must run) | `vendor/bin/phpunit ... HooksSmokeTest.php` | explicit step |
+
 ## Skip validation (emergency only)
 
 ```bash
