@@ -88,6 +88,45 @@ final class FileComparatorTest extends TestCase
         FileComparator::getHash($missingFile);
     }
 
+    public function testGetHashThrowsWhenFileIsNotReadableFile(): void
+    {
+        $file = $this->createFile('locked.txt', 'secret');
+        $this->assertTrue(\is_readable($file));
+
+        self::assertTrue(\chmod($file, 0000));
+
+        if (\is_readable($file)) {
+            $this->markTestSkipped('Running as a user that can read chmod 0000 files');
+        }
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('File is not readable');
+
+        FileComparator::getHash($file);
+    }
+
+    public function testGetHashThrowsWhenHashCalculationFails(): void
+    {
+        $directory = $this->tempRoot . \DIRECTORY_SEPARATOR . 'directory';
+        self::assertTrue(\mkdir($directory));
+
+        \set_error_handler(static fn (): bool => true, \E_NOTICE);
+
+        try {
+            try {
+                FileComparator::getHash($directory);
+                self::fail('Expected RuntimeException was not thrown');
+            } catch (\RuntimeException $exception) {
+                self::assertStringContainsString(
+                    'Failed to calculate sha256 hash',
+                    $exception->getMessage(),
+                );
+            }
+        } finally {
+            \restore_error_handler();
+        }
+    }
+
     public function testMatchesHashReturnsTrueWhenHashMatches(): void
     {
         $file = $this->createFile('match.txt', 'match me');

@@ -23,10 +23,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `docs/INSTALLATION.md` with install, hook install/uninstall, verification, and emergency skip guidance.
 - Added `docs/CONFIGURATION.md` documenting current behavior: tool config fallbacks, staged-files scope, and commit-msg rules (planned `git-hooks.json` included).
 - Added `docs/MIGRATION.md` with the intended 1.x to 0.1.0 migration steps for consumers.
+- Added `GitRepository::resolveHooksDir()` helper resolving the hooks directory with git-first
+  detection (`git -C <dir> rev-parse --git-path hooks`) and a manual fallback that parses `.git`
+  directory, `.git` file (`gitdir:` entry), and linked-worktree `commondir` files.
+- Expanded unit-test coverage for `PathBuilder::canonicalize()` (stream wrappers, Windows drive
+  prefixes, `.`/`..` segments in absolute and relative paths) and `FileComparator` failure paths
+  (unreadable files and failed hash calculation), raising the class coverage ratio to 62.5% (5/8).
+- Updated `README.md` installation docs: hooks are not auto-installed on `composer install`/`update`
+  (run `composer install-hooks` explicitly), and the hooks destination is resolved git-first,
+  honoring worktrees and `core.hooksPath`.
+- Clarified package documentation and templates: fixed malformed PHPDoc in `ComposerScripts`,
+  made `postInstall`/`postUpdate` docblocks reflect that they are not wired to `composer.json`,
+  reported the resolved hooks directory in the installer output, documented the legacy/unused
+  `Config` constants accurately, aligned the README pre-commit step order and output with the
+  real hook scripts, completed the README composer scripts list (`clear:cache`, `style`), added
+  a README Roadmap for planned features, and fixed the verify command and template structure in
+  the install docs and bug-report template.
+- Added review hardening: `GitRepository::resolveHooksDir()` results are cached per base path so
+  a single install/uninstall run invokes the git binary at most once, `GitRepository::isGitRepository()`
+  drives a console warning when hooks are installed outside a Git repository, `PathBuilder::canonicalize()`
+  now resolves non-empty paths that collapse to nothing to the current directory ('.'), and the git-first
+  resolution tests run against a simulated `git` binary so class coverage no longer depends on a real
+  git being installed.
 
 ### Changed
 
 - Switched the PHP CS Fixer config to the CodeIgniter coding standard ruleset, keeping the CiHispano header via overrides.
+- Fixed the install command when the package is used as a dependency: the hooks source directory
+  is now always resolved from the installed package root (`dirname(__DIR__)`) instead of the
+  consumer project root, which previously aborted the install with "Hooks source directory does
+  not exist".
+- `ComposerScripts::getGitHooksDir()` now delegates to `GitRepository::resolveHooksDir()`, so
+  destination resolution is always git-first (worktrees, `core.hooksPath`, submodules) with a
+  manual fallback, regardless of how the install was invoked.
+- Added `PathBuilder::canonicalize()` to resolve `.` and `..` segments in relative git paths
+  without requiring the file to exist.
 - Replaced the Termwind runtime dependency with native ANSI console output that respects `NO_COLOR`.
 - Upgraded PHPStan from 1.x to 2.x and set the analysis level to 10.
 - Expanded runtime compatibility to PHP 8.1 through 8.4.

@@ -25,12 +25,16 @@ final class Config
     public const DEFAULT_ALGORITHM = 'sha256';
 
     /**
-     * Git hooks directory relative path.
+     * Legacy default Git hooks directory relative path.
+     *
+     * Retained for reference and backwards compatibility. Runtime resolution
+     * is git-first via GitRepository::resolveHooksDir(), so the effective
+     * directory may differ (worktrees, core.hooksPath, submodules).
      */
     public const GIT_HOOKS_DIR = '.git' . \DIRECTORY_SEPARATOR . 'hooks';
 
     /**
-     * Build directory name.
+     * Build directory name (QA cache artifacts).
      */
     public const BUILD_DIR = 'build';
 
@@ -47,6 +51,8 @@ final class Config
     /**
      * Default hook files available for installation.
      *
+     * Informative reference matching the hooks shipped in src/Hooks.
+     *
      * @var list<string>
      */
     public const DEFAULT_HOOKS = [
@@ -57,6 +63,9 @@ final class Config
 
     /**
      * File extensions to exclude from hook installation.
+     *
+     * Reserved for future filtering logic; the current installer ignores
+     * dotfiles and any entry containing a dot.
      *
      * @var list<string>
      */
@@ -96,11 +105,15 @@ final class Config
      * Maximum allowed hook file size in bytes.
      *
      * Default: 1MB
+     *
+     * Reserved for future size validation; not enforced by the current installer.
      */
     public const MAX_HOOK_FILE_SIZE = 1048576;
 
     /**
      * Minimum PHP version required.
+     *
+     * Informative reference matching the composer.json constraint.
      */
     public const MIN_PHP_VERSION = '8.1.0';
 

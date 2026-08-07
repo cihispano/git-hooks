@@ -14,6 +14,7 @@ namespace CiHispano;
 
 use CiHispano\Util\FileComparator;
 use CiHispano\Util\FilePermissions;
+use CiHispano\Util\GitRepository;
 use CiHispano\Util\PathBuilder;
 use Exception;
 use RuntimeException;
@@ -28,7 +29,7 @@ final class ComposerScripts
     /**
      * Install the Git hooks.
      *
-     * @param mixed $event Or string|null basePath
+     * @param mixed $event Composer event or base path string
      *
      * @throws RuntimeException
      */
@@ -37,6 +38,13 @@ final class ComposerScripts
         $basePath = \is_string($event) ? $event : (\getcwd() ?: '.');
 
         self::ensureBuildDirectory($basePath);
+
+        if (! GitRepository::isGitRepository($basePath)) {
+            ConsoleLogger::warning(
+                'This directory is not a Git repository. Hooks are installed but will never run.',
+                true,
+            );
+        }
 
         ConsoleLogger::separator(Config::SEPARATOR_LENGTH, Config::COLOR_INFO);
         ConsoleLogger::header('Installing Git Hooks', Config::COLOR_INFO);
@@ -71,7 +79,7 @@ final class ComposerScripts
     /**
      * Uninstall Git hooks.
      *
-     * @param mixed $event Or string|null basePath
+     * @param mixed $event Composer event or base path string
      *
      * @throws RuntimeException
      */
@@ -117,9 +125,11 @@ final class ComposerScripts
     }
 
     /**
-     * Composer post-install hook.
-     * * This method is called automatically after 'composer install'
-     * is executed in the project.
+     * Composer post-install wrapper.
+     *
+     * Not registered in composer.json: hooks are installed explicitly via
+     * the `install-hooks` script. Kept as a public entry point for projects
+     * that wire it manually.
      */
     public static function postInstall(): void
     {
@@ -127,9 +137,11 @@ final class ComposerScripts
     }
 
     /**
-     * Composer post-update hook.
-     * * This method is called automatically after 'composer update'
-     * is executed in the project.
+     * Composer post-update wrapper.
+     *
+     * Not registered in composer.json: hooks are installed explicitly via
+     * the `install-hooks` script. Kept as a public entry point for projects
+     * that wire it manually.
      */
     public static function postUpdate(): void
     {
@@ -139,7 +151,7 @@ final class ComposerScripts
     /**
      * Get existing hook files from the Git hooks directory.
      *
-     * * @param string $gitHooksDir Path to the .git/hooks directory
+     * @param string $gitHooksDir Path to the hooks directory
      *
      * @return list<string>
      *
@@ -178,9 +190,9 @@ final class ComposerScripts
      *
      * @throws RuntimeException
      */
-    private static function getHookFilesOrFail(?string $basePath = null): array
+    private static function getHookFilesOrFail(): array
     {
-        $hooksSource = self::getHooksSourceDir($basePath);
+        $hooksSource = self::getHooksSourceDir();
 
         $entries = @\scandir($hooksSource);
 
@@ -248,9 +260,11 @@ final class ComposerScripts
      */
     private static function copyHooks(?string $basePath = null): void
     {
-        $hooks = self::getHookFilesOrFail($basePath);
+        $hooks       = self::getHookFilesOrFail();
+        $hooksDir    = self::getGitHooksDir($basePath);
+        $destination = PathBuilder::normalize($hooksDir);
 
-        ConsoleLogger::step(1, 2, 'Copying hooks to .git/hooks/');
+        ConsoleLogger::step(1, 2, "Copying hooks to {$destination}");
         ConsoleLogger::newLine();
 
         foreach ($hooks as $hookFile) {
@@ -270,7 +284,7 @@ final class ComposerScripts
         string $fileName,
         ?string $basePath = null,
     ): void {
-        $sourcePath = PathBuilder::join(self::getHooksSourceDir($basePath), $fileName);
+        $sourcePath = PathBuilder::join(self::getHooksSourceDir(), $fileName);
         $destPath   = PathBuilder::join(self::getGitHooksDir($basePath), $fileName);
 
         if (! \file_exists($sourcePath)) {
@@ -303,8 +317,8 @@ final class ComposerScripts
     /**
      * Remove a single hook file.
      *
-     * * @param string $hookFile     Name of the hook file
-     * @param string $gitHooksDir Path to the .git/hooks directory
+     * @param string $hookFile    Name of the hook file
+     * @param string $gitHooksDir Path to the hooks directory
      *
      * @throws RuntimeException If the file exists but cannot be deleted
      */
@@ -333,11 +347,15 @@ final class ComposerScripts
     /**
      * Get the hooks source directory from the package.
      *
+     * The source always lives inside the installed package (dirname(__DIR__)),
+     * never inside the consumer project. Only the destination (getGitHooksDir)
+     * depends on the project where hooks are being installed.
+     *
      * @throws RuntimeException
      */
-    private static function getHooksSourceDir(?string $basePath = null): string
+    private static function getHooksSourceDir(): string
     {
-        $root = $basePath ?? \dirname(__DIR__);
+        $root = \dirname(__DIR__);
 
         $path = PathBuilder::joinMultiple(
             $root,
@@ -358,28 +376,17 @@ final class ComposerScripts
     /**
      * Get the Git hooks directory in the project.
      *
-     * * @param string|null $basePath Optional base path for resolution
+     * Delegates to GitRepository::resolveHooksDir() so the resolution is
+     * always git-first (worktrees, core.hooksPath, submodules) with a manual
+     * fallback, regardless of how the method was invoked.
+     *
+     * @param string|null $basePath Optional base path for resolution
      *
      * @throws RuntimeException If the path cannot be determined
      */
     private static function getGitHooksDir(?string $basePath = null): string
     {
-        if (null === $basePath) {
-            $detectedPath = PathBuilder::getHooksPath();
-            if (null !== $detectedPath) {
-                return $detectedPath;
-            }
-        }
-
-        $root = $basePath ?? \getcwd();
-
-        if (false === $root) {
-            throw new RuntimeException('Unable to determine current working directory');
-        }
-
-        $path = PathBuilder::join($root, Config::GIT_HOOKS_DIR);
-
-        return PathBuilder::normalize($path);
+        return GitRepository::resolveHooksDir($basePath);
     }
 
     /**
@@ -399,7 +406,7 @@ final class ComposerScripts
             throw new RuntimeException("Base path does not exist or is not a directory: {$basePath}");
         }
 
-        $buildPath = PathBuilder::join($basePath, 'build');
+        $buildPath = PathBuilder::join($basePath, Config::BUILD_DIR);
 
         if (\is_dir($buildPath)) {
             return;

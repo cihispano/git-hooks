@@ -81,6 +81,46 @@ final class PathBuilderTest extends TestCase
         self::assertSame('vfs://root/hooks', PathBuilder::normalize('vfs://root/hooks/'));
     }
 
+    public function testCanonicalizeKeepsStreamWrapperFormat(): void
+    {
+        self::assertSame('vfs://root/hooks', PathBuilder::canonicalize('vfs://root/hooks/'));
+    }
+
+    public function testCanonicalizeResolvesDotSegmentsInAbsolutePath(): void
+    {
+        self::assertSame(
+            \DIRECTORY_SEPARATOR . 'var' . \DIRECTORY_SEPARATOR . 'www' . \DIRECTORY_SEPARATOR . 'project',
+            PathBuilder::canonicalize('/var/www/./project/../project'),
+        );
+    }
+
+    public function testCanonicalizeResolvesWindowsDrivePrefix(): void
+    {
+        self::assertSame(
+            'C:' . \DIRECTORY_SEPARATOR . 'src',
+            PathBuilder::canonicalize('C:\\project\\..\\src'),
+        );
+    }
+
+    public function testCanonicalizePreservesLeadingDoubleDotsInRelativePath(): void
+    {
+        self::assertSame(
+            '..' . \DIRECTORY_SEPARATOR . 'pre-commit',
+            PathBuilder::canonicalize('../hooks/../pre-commit'),
+        );
+    }
+
+    public function testCanonicalizeKeepsEmptyPathEmpty(): void
+    {
+        self::assertSame('', PathBuilder::canonicalize(''));
+    }
+
+    public function testCanonicalizeResolvesCollapsingPathToCurrentDirectory(): void
+    {
+        self::assertSame('.', PathBuilder::canonicalize('hooks/..'));
+        self::assertSame('.', PathBuilder::canonicalize('./'));
+    }
+
     public function testJoinMultipleBuildsPathFromSeveralSegments(): void
     {
         $result = PathBuilder::joinMultiple('foo/bar/', '\\baz', 'hooks', 'pre-commit');

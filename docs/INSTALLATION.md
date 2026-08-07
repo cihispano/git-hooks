@@ -28,7 +28,8 @@ composer install-hooks
 
 The installer:
 
-1. Detects the Git hooks directory (`.git/hooks`).
+1. Resolves the Git hooks directory using git-first resolution (`git -C <dir> rev-parse --git-path hooks`),
+   with a manual `.git` fallback that also supports worktrees (`gitdir:`/`commondir`) and `core.hooksPath`.
 2. Copies the packaged hooks `pre-commit`, `commit-msg`, and `pre-push`.
 3. Marks them executable (skipped on Windows).
 4. Reuses an existing hook when its content is identical, and overwrites it (`chmod 755`) when it changed.
@@ -44,10 +45,11 @@ Only the packaged hooks are removed. Sample files (`*.sample`) and hidden files 
 ## Verify the installation
 
 ```bash
-git -C .git/hooks ls hooks
+git rev-parse --git-path hooks
+ls "$(git rev-parse --git-path hooks)"
 ```
 
-Expect a list containing at least `pre-commit`, `commit-msg`, and `pre-push`.
+The `ls` output should list at least `pre-commit`, `commit-msg`, and `pre-push`.
 
 ## Skip validation (emergency only)
 
