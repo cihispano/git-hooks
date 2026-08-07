@@ -38,7 +38,14 @@ Guidance for Claude Code sessions working in this repository.
 - `src/Util/` — reusable utility classes.
 - `src/Support/` — shared support classes.
 - `tests/` — PHPUnit suite.
+- `scripts/` — development-only tooling (e.g. `scripts/reset.php`).
 - `docs/` — package documentation.
+
+## Validation workflow
+
+Run `composer reset && composer check:all` before closing each feature/fix/bug: the reset
+removes `vendor/` and QA caches (keeps `composer.lock` for reproducibility) and reinstalls,
+then the full quality suite (PHPStan level 10, PHPCS, PHP CS Fixer, PHPUnit) runs clean.
 
 ## Local hooks
 

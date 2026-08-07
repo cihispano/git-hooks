@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5d29ac492aad2fcce43791f4eeba11e3",
+    "content-hash": "7cd9bac4f2bf84f86e15077408266b8b",
     "packages": [],
     "packages-dev": [
         {
@@ -70,6 +70,60 @@
                 }
             ],
             "time": "2022-12-23T10:58:28+00:00"
+        },
+        {
+            "name": "codeigniter/coding-standard",
+            "version": "v1.8.9",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/CodeIgniter/coding-standard.git",
+                "reference": "2f04b8daf72c3afa2da032c4d912c2c108b3762b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/CodeIgniter/coding-standard/zipball/2f04b8daf72c3afa2da032c4d912c2c108b3762b",
+                "reference": "2f04b8daf72c3afa2da032c4d912c2c108b3762b",
+                "shasum": ""
+            },
+            "require": {
+                "ext-tokenizer": "*",
+                "friendsofphp/php-cs-fixer": "^3.92",
+                "nexusphp/cs-config": "^3.27",
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "nexusphp/tachycardia": "^2.4",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^10.5 || ^11.5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "CodeIgniter\\CodingStandard\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "John Paul E. Balandan, CPA",
+                    "email": "paulbalandan@gmail.com"
+                }
+            ],
+            "description": "Official Coding Standards for CodeIgniter based on PHP CS Fixer",
+            "keywords": [
+                "phpcs",
+                "static analysis"
+            ],
+            "support": {
+                "forum": "http://forum.codeigniter.com/",
+                "issues": "https://github.com/CodeIgniter/coding-standard/issues",
+                "slack": "https://codeigniterchat.slack.com",
+                "source": "https://github.com/CodeIgniter/coding-standard"
+            },
+            "time": "2025-12-12T13:19:32+00:00"
         },
         {
             "name": "composer/pcre",
@@ -779,6 +833,60 @@
                 }
             ],
             "time": "2025-08-01T08:46:24+00:00"
+        },
+        {
+            "name": "nexusphp/cs-config",
+            "version": "v3.27.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/NexusPHP/cs-config.git",
+                "reference": "c2bfb57a4eb780e6a75dbd13551964da5d32c450"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/NexusPHP/cs-config/zipball/c2bfb57a4eb780e6a75dbd13551964da5d32c450",
+                "reference": "c2bfb57a4eb780e6a75dbd13551964da5d32c450",
+                "shasum": ""
+            },
+            "require": {
+                "ext-tokenizer": "*",
+                "friendsofphp/php-cs-fixer": "^3.92",
+                "php": "^8.1"
+            },
+            "conflict": {
+                "liaison/cs-config": "*"
+            },
+            "require-dev": {
+                "nexusphp/tachycardia": "^2.1",
+                "phpstan/extension-installer": "^1.4",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^10.5 || ^11.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Nexus\\CsConfig\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "John Paul E. Balandan, CPA",
+                    "email": "paulbalandan@gmail.com"
+                }
+            ],
+            "description": "A factory for custom rulesets for PHP CS Fixer.",
+            "support": {
+                "issues": "https://github.com/NexusPHP/cs-config/issues",
+                "slack": "https://nexusphp.slack.com",
+                "source": "https://github.com/NexusPHP/cs-config.git"
+            },
+            "time": "2025-12-12T13:07:34+00:00"
         },
         {
             "name": "nikic/php-parser",

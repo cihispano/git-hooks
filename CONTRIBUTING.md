@@ -17,6 +17,7 @@ This guide explains how to work on the package locally, run validations, underst
 - `src/Support/`: shared support classes
 - `src/Util/`: reusable utility classes
 - `tests/`: PHPUnit test suite
+- `scripts/`: development-only tooling (e.g. `scripts/reset.php` for clean reinstalls)
 - `docs/`: package documentation
 - `.github/workflows/`: CI workflow definitions used by this repository
 
@@ -37,6 +38,7 @@ composer analyze
 composer sniff
 composer cs
 composer cs:fix
+composer reset
 composer sniff:fix
 composer test
 composer test:coverage

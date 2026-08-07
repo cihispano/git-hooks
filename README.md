@@ -170,6 +170,10 @@ This package provides the following Composer scripts:
         ],
         "cs": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/php-cs-fixer fix --ansi --verbose --dry-run --diff",
         "cs:fix": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/php-cs-fixer fix --ansi --verbose --diff",
+        "reset": [
+            "@php scripts/reset.php",
+            "@composer install --no-interaction --optimize-autoloader"
+        ],
         "sniff": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/phpcs",
         "sniff:fix": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/phpcbf",
         "test": "@php -d xdebug.mode=off -d xdebug.log= vendor/bin/phpunit --configuration phpunit.xml.dist --colors=always",
@@ -189,9 +193,15 @@ composer sniff
 composer cs
 composer cs:fix
 composer sniff:fix
+composer reset
 composer test
 composer test:coverage
 ```
+
+> `composer reset` removes installed dependencies and QA cache artifacts (`vendor/`,
+> `build/`, `.php-cs-fixer.cache`, `.phpunit.result.cache`) and reinstalls everything
+> from scratch, keeping `composer.lock` for reproducible validation. Run it before
+> validating each feature, fix, or bug.
 
 ## 🔧 Integration with Existing Projects
 
