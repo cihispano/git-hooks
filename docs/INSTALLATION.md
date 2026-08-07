@@ -51,6 +51,44 @@ ls "$(git rev-parse --git-path hooks)"
 
 The `ls` output should list at least `pre-commit`, `commit-msg`, and `pre-push`.
 
+## Trust boundary
+
+Before installing these hooks, understand **what they execute and with whose privileges**:
+
+- On every `git commit`, `pre-commit` runs the tools present in the project's
+  `vendor/bin` (`php-cs-fixer`, `phpcs`, `phpstan`) against the staged files, using the
+  project's own configuration (`phpcs.xml(.dist)`, `phpstan.neon(.dist)`,
+  `.php-cs-fixer(.dist).php`, `phpunit.xml(.dist)`) when present, falling back to the
+  package defaults otherwise.
+- On every `git push`, `pre-push` runs the project's PHPUnit suite and a full project
+  PHPStan analysis.
+- These tools execute **repository-controlled code** (configuration files and
+  `vendor/bin/*` binaries) with **your user's privileges**, on every commit and push of
+  any branch you check out.
+
+Because of this, these hooks must be treated like any pre-commit CI: installing them in a
+repository you do not trust is equivalent to letting that repository run code on your
+machine. **Only install the hooks in repositories you and your team already trust.**
+
+As a rule of thumb:
+
+- The repo configuration wins over the package defaults. This is the intended behavior:
+  the package brings sensible defaults, but your project is allowed to override them.
+- A malicious `.php-cs-fixer.php` or `phpstan.neon` in a branch you check out can already
+  achieve code execution through the tools. Reviewing changes to these files is part of
+  the normal code review gate.
+
+For the 0.1.0 line this is **documentation only**: there is no allowlist gate yet. A
+project allowlist (`git-hooks.json`) to restrict which configs and binaries the hooks may
+run is planned for future releases.
+
+### `composer install-hooks` may override local hooks
+
+The installer only overwrites a hook when its content **changed**. A local customization
+you wrote on top of an installed hook will be preserved as long as the package hook did
+not change; after a package update the installed hook is refreshed. Re-apply your local
+edits after updates, or move them to a wrapper hook.
+
 ## Skip validation (emergency only)
 
 ```bash

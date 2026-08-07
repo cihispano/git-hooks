@@ -46,5 +46,16 @@ Planned project-level file to control:
 - `build_dir`
 - tool toggles (`phpstan`, `phpcs`, `php_cs_fixer`, `phpunit`)
 - `commit_msg` overrides (`min_length`, `max_length`, `types`)
+- a **tool/config allowlist**: the set of project config files and `vendor/bin` binaries
+  the hooks may execute, closing the [trust boundary](INSTALLATION.md#trust-boundary)
+  (SEC-001) with an opt-in gate instead of documentation only.
 
 When implemented, this page will show the schema and defaults.
+
+## Trust boundary (current behavior)
+
+Today the hooks run, on every `commit`/`push`, the repository's configuration files and
+`vendor/bin` tools with the developer's user privileges — the repository config takes
+priority over the package defaults. This is by design and is **documented only** for the
+0.1.0 line; see [Installation — Trust boundary](INSTALLATION.md#trust-boundary) for the
+full model and the planned `git-hooks.json` allowlist.
