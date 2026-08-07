@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Documented the **trust boundary** (SEC-001) in `docs/INSTALLATION.md`, `docs/CONFIGURATION.md`
+  and `README.md`: installed hooks execute the repository's QA configs and `vendor/bin` tools
+  with the developer's privileges on every `commit`/`push`, so consumers should only install
+  them in repositories they trust. For 0.1.x this is documentation only — a `git-hooks.json`
+  tool/config allowlist is planned (README Roadmap updated).
+- Added `tests/Unit/HooksSmokeTest.php`: a shell smoke test that installs the real packaged
+  `pre-commit` hook into a temporary Git repository, stages PHP files whose names contain
+  spaces and shell metacharacters, and asserts every QA tool receives each filename as a
+  single intact argument (SEC-002).
 - Added a `composer reset` command (`scripts/reset.php`) that removes dependencies and QA
   cache artifacts (`vendor/`, `build/`, `.php-cs-fixer.cache`, `.phpunit.result.cache`),
   then reinstalls from scratch keeping `composer.lock` for reproducible validation — run
@@ -48,6 +57,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Hardened the distributed shell hooks per the security review:
+  - `pre-commit`: staged files are collected with `set -f` and a newline `IFS` so filenames
+    containing spaces or shell metacharacters are never globbed or word-split and reach the
+    QA tools as single arguments (SEC-002); the staged-file listing also works on a
+    repository without an initial commit (no `HEAD` yet).
+  - `pre-commit`/`pre-push`: the project root is now resolved with `dirname`/`cd` instead of
+    interpolating `$0` into a `php -r` string, so checkout paths containing single quotes no
+    longer break (SEC-003).
+  - `commit-msg`/`pre-commit`/`pre-push`: `echo -e` replaced with `printf` for POSIX
+    portability (SEC-004).
+  - All three hooks pass `shellcheck` with zero violations.
 - Switched the PHP CS Fixer config to the CodeIgniter coding standard ruleset, keeping the CiHispano header via overrides.
 - Fixed the install command when the package is used as a dependency: the hooks source directory
   is now always resolved from the installed package root (`dirname(__DIR__)`) instead of the

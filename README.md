@@ -22,8 +22,10 @@ Automated Git Hooks for CodeIgniter 4 projects. This package ensures your code m
 Planned, not yet available:
 
 - **`git-hooks.json`** - Project-level configuration: `auto_install`, `build_dir`, tool
-  toggles (`phpstan`, `phpcs`, `php_cs_fixer`, `phpunit`), and `commit_msg` overrides
-  (`min_length`, `max_length`, `types`).
+  toggles (`phpstan`, `phpcs`, `php_cs_fixer`, `phpunit`), `commit_msg` overrides
+  (`min_length`, `max_length`, `types`), and a **tool/config allowlist** to decide which
+  project configuration files and `vendor/bin` binaries the hooks may run (trust gate for
+  SEC-001).
 - **Opt-in auto-install** - Option to install hooks automatically on `composer install`/`update`.
 - **PHP-based hooks** - Replace the current shell scripts with PHP bootstrap scripts that
   delegate to the package classes.
@@ -178,6 +180,24 @@ composer uninstall-hooks
 The hooks are located in your repository's hooks directory (usually `.git/hooks/`, but
 git-first resolution honors `core.hooksPath` and worktrees) after installation. You can
 modify them if needed, but keep in mind they will be overwritten when you update the package.
+
+## 🔒 Trust boundary
+
+The hooks execute **repository-controlled code** with **your user's privileges**:
+
+- `pre-commit` runs the QA tools from `vendor/bin` (`php-cs-fixer`, `phpcs`, `phpstan`)
+  against the staged files, using the project's own configs when present
+  (`.php-cs-fixer(.dist).php`, `phpcs.xml(.dist)`, `phpstan.neon(.dist)`, `phpunit.xml(.dist)`).
+- `pre-push` runs the project's PHPUnit suite and a full PHPStan analysis.
+
+A malicious config file or `vendor/bin` tool in a checked-out branch can therefore run
+code on every developer's machine at the next `commit`/`push`. Install these hooks **only
+in repositories you already trust** — the repo config overrides the package defaults by
+design, and the trust model is documented in
+[`docs/INSTALLATION.md`](docs/INSTALLATION.md#trust-boundary).
+
+For the 0.1.0 line this is documentation only; a `git-hooks.json` allowlist to gate which
+configs and binaries the hooks may run is planned (see [Roadmap](#-roadmap)).
 
 ## 📊 Composer Scripts
 
