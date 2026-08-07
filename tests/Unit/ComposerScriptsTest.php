@@ -116,40 +116,28 @@ final class ComposerScriptsTest extends TestCase
         );
     }
 
-    public function testInstallThrowsWhenHooksSourceDirectoryMissing(): void
+    public function testInstallCopiesPackageHooksToConsumerProject(): void
     {
-        $projectRoot = $this->createProjectStructure(false);
+        $projectRoot = $this->createConsumerStructure();
 
-        try {
-            $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
-            self::fail('Expected install() to fail when the hooks source directory is missing.');
-        } catch (\RuntimeException $exception) {
-            self::assertSame('Failed to install git hooks. Check the errors above.', $exception->getMessage());
-            self::assertNotNull($exception->getPrevious());
-            self::assertStringContainsString(
-                'Hooks source directory does not exist',
-                $exception->getPrevious()?->getMessage() ?? '',
-            );
+        self::assertDirectoryExists($this->packageHooksSourceDir());
+
+        foreach (Config::DEFAULT_HOOKS as $hook) {
+            self::assertFileExists($this->packageHooksSourceDir() . \DIRECTORY_SEPARATOR . $hook);
         }
-    }
 
-    public function testInstallThrowsWhenNoValidHookFilesFound(): void
-    {
-        $projectRoot = $this->createProjectStructure();
-        $hooksSourceDir =
-            $projectRoot . \DIRECTORY_SEPARATOR . Config::SRC_DIR . \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR;
+        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
 
-        $this->removeDirectory($hooksSourceDir);
-        self::assertTrue(\mkdir($hooksSourceDir, FilePermissions::DIR_DEFAULT, true));
-        \file_put_contents($hooksSourceDir . \DIRECTORY_SEPARATOR . 'README.md', 'ignored');
-        \file_put_contents($hooksSourceDir . \DIRECTORY_SEPARATOR . 'pre-commit.sample', 'ignored');
+        $hooksDir = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
 
-        try {
-            $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
-            self::fail('Expected install() to fail when no valid hook files are available.');
-        } catch (\RuntimeException $exception) {
-            self::assertSame('Failed to install git hooks. Check the errors above.', $exception->getMessage());
-            self::assertStringContainsString('No valid hook files found', $exception->getPrevious()?->getMessage() ?? '');
+        foreach (Config::DEFAULT_HOOKS as $hook) {
+            self::assertFileExists($hooksDir . \DIRECTORY_SEPARATOR . $hook);
+            self::assertSame(
+                \file_get_contents(
+                    $this->packageHooksSourceDir() . \DIRECTORY_SEPARATOR . $hook,
+                ),
+                \file_get_contents($hooksDir . \DIRECTORY_SEPARATOR . $hook),
+            );
         }
     }
 
@@ -221,24 +209,34 @@ final class ComposerScriptsTest extends TestCase
         }
     }
 
-    public function testInstallWrapsFailureWhenHooksSourceCannotBeRead(): void
+    public function testInstallResolvesWorktreeGitFileDestination(): void
     {
-        $root = $this->createVfsProjectStructure();
-        $hooksSource = $root->getChild(Config::SRC_DIR)->getChild(Config::HOOKS_SOURCE_DIR);
-        $hooksSource->chmod(FilePermissions::DIR_NO_ACCESS);
+        $projectRoot = $this->createConsumerStructure(true);
+        $mainRepo    = $this->tempRoot . \DIRECTORY_SEPARATOR . 'main-repo';
 
-        try {
-            $this->runOutsideGitRepository(
-                $this->tempRoot,
-                static fn (): mixed => ComposerScripts::install($root->url()),
-            );
-            self::fail('Expected install() to fail when the hooks source directory cannot be read.');
-        } catch (\RuntimeException $exception) {
-            self::assertSame('Failed to install git hooks. Check the errors above.', $exception->getMessage());
-            self::assertStringContainsString(
-                'Unable to read hooks source directory',
-                $exception->getPrevious()?->getMessage() ?? '',
-            );
+        self::assertTrue(\mkdir($mainRepo, FilePermissions::DIR_DEFAULT, true));
+
+        $commonGitDir = $mainRepo . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
+        self::assertTrue(\mkdir($commonGitDir, FilePermissions::DIR_DEFAULT, true));
+
+        $worktreeGitDir = $mainRepo .
+            \DIRECTORY_SEPARATOR . '.git' . \DIRECTORY_SEPARATOR .
+            'worktrees' . \DIRECTORY_SEPARATOR . 'wt';
+
+        self::assertTrue(\mkdir($mainRepo . \DIRECTORY_SEPARATOR . '.git' . \DIRECTORY_SEPARATOR . 'worktrees', FilePermissions::DIR_DEFAULT, true));
+        self::assertTrue(\mkdir($worktreeGitDir, FilePermissions::DIR_DEFAULT, true));
+
+        \file_put_contents(
+            $projectRoot . \DIRECTORY_SEPARATOR . '.git',
+            "gitdir: {$worktreeGitDir}\n",
+        );
+
+        \file_put_contents($worktreeGitDir . \DIRECTORY_SEPARATOR . 'commondir', '../..' . PHP_EOL);
+
+        $this->runOutsideGitRepository($projectRoot, static fn (): mixed => ComposerScripts::install($projectRoot));
+
+        foreach (Config::DEFAULT_HOOKS as $hook) {
+            self::assertFileExists($commonGitDir . \DIRECTORY_SEPARATOR . $hook);
         }
     }
 
@@ -446,6 +444,28 @@ final class ComposerScriptsTest extends TestCase
         }
 
         return $projectRoot;
+    }
+
+    private function createConsumerStructure(bool $withGitFile = false): string
+    {
+        $projectRoot = $this->tempRoot . \DIRECTORY_SEPARATOR . 'consumer-' . \bin2hex(\random_bytes(4));
+
+        self::assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
+
+        if ($withGitFile) {
+            return $projectRoot;
+        }
+
+        self::assertTrue(\mkdir($projectRoot . \DIRECTORY_SEPARATOR . '.git', FilePermissions::DIR_DEFAULT, true));
+
+        return $projectRoot;
+    }
+
+    private function packageHooksSourceDir(): string
+    {
+        return \dirname(__DIR__, 2) .
+            \DIRECTORY_SEPARATOR . Config::SRC_DIR .
+            \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR;
     }
 
     private function createVfsProjectStructure(

@@ -20,13 +20,21 @@ title: "🐛 Bug Report"
 
 ```text
 
-Steps To Reproduce
+```
+
+## Steps To Reproduce
+
 1.
 2.
 3.
-Context
+
+## Context
+
 <!-- Branch, PHP/Git version, environment, file(s) involved -->
+
 - Branch:
 - Git Hooks version:
-Acceptance Criteria
+
+## Acceptance Criteria
+
 -
