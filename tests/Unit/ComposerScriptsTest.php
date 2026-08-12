@@ -14,6 +14,7 @@ namespace CiHispano\Tests\Unit;
 
 use CiHispano\ComposerScripts;
 use CiHispano\Config;
+use CiHispano\Config\ProjectConfig;
 use CiHispano\ConsoleLogger;
 use CiHispano\Tests\Exceptions\AssertionsException;
 use CiHispano\Util\FilePermissions;
@@ -384,6 +385,7 @@ final class ComposerScriptsTest extends TestCase
     public function testPostInstallUsesCurrentWorkingDirectory(): void
     {
         $projectRoot = $this->createProjectStructure();
+        $this->writeConfig($projectRoot, '{"auto_install": true}');
 
         $this->runOutsideGitRepository($projectRoot, static function (): mixed {
             ComposerScripts::postInstall();
@@ -401,6 +403,7 @@ final class ComposerScriptsTest extends TestCase
     public function testPostUpdateReinstallsAfterHookChanges(): void
     {
         $projectRoot = $this->createProjectStructure();
+        $this->writeConfig($projectRoot, '{"auto_install": true}');
 
         $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
             ComposerScripts::install($projectRoot);
@@ -423,6 +426,110 @@ final class ComposerScriptsTest extends TestCase
             ),
             \file_get_contents($installedHook),
         );
+    }
+
+    public function testPostInstallSkipsWhenAutoInstallIsNotEnabled(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+
+        $this->runOutsideGitRepository($projectRoot, static function (): mixed {
+            ComposerScripts::postInstall();
+
+            return null;
+        });
+
+        foreach (Config::DEFAULT_HOOKS as $hook) {
+            $this->assertFileDoesNotExist(
+                $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR . \DIRECTORY_SEPARATOR . $hook,
+            );
+        }
+
+        \rewind($this->output);
+        $output = \stream_get_contents($this->output);
+        $this->assertStringContainsString('Auto-install is disabled', $output);
+        $this->assertStringNotContainsString('Git hooks installed successfully', $output);
+    }
+
+    public function testPostInstallThrowsOnInvalidConfigWithoutFallingBack(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+        $this->writeConfig($projectRoot, '{"auto_install":');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Invalid git-hooks.json');
+
+        $this->runOutsideGitRepository($projectRoot, static function (): mixed {
+            ComposerScripts::postInstall();
+
+            return null;
+        });
+    }
+
+    public function testInitHooksCreatesDefaultConfigFile(): void
+    {
+        $projectRoot = $this->tempRoot . \DIRECTORY_SEPARATOR . 'init-' . \bin2hex(\random_bytes(4));
+
+        $this->assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
+
+        ComposerScripts::initHooks($projectRoot);
+
+        $configPath = $projectRoot . \DIRECTORY_SEPARATOR . ProjectConfig::FILE_NAME;
+
+        $this->assertFileExists($configPath);
+
+        $configContents = (string) \file_get_contents($configPath);
+        $decoded        = \json_decode($configContents, true);
+        $this->assertIsArray($decoded);
+        $this->assertFalse($decoded['auto_install'] ?? null);
+        $this->assertSame('build', $decoded['build_dir'] ?? null);
+
+        \rewind($this->output);
+        $output = \stream_get_contents($this->output);
+        $this->assertStringContainsString('Created git-hooks.json', $output);
+    }
+
+    public function testInitHooksThrowsWhenConfigFileAlreadyExists(): void
+    {
+        $projectRoot = $this->tempRoot . \DIRECTORY_SEPARATOR . 'init-existing-' . \bin2hex(\random_bytes(4));
+
+        $this->assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
+        $this->writeConfig($projectRoot, '{"auto_install": true}');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('already exists');
+
+        ComposerScripts::initHooks($projectRoot);
+    }
+
+    public function testInstallUsesBuildDirFromProjectConfig(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+        $this->writeConfig($projectRoot, '{"build_dir": "cache"}');
+
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
+
+        $this->assertDirectoryExists($projectRoot . \DIRECTORY_SEPARATOR . 'cache');
+        $this->assertDirectoryDoesNotExist($projectRoot . \DIRECTORY_SEPARATOR . Config::BUILD_DIR);
+    }
+
+    public function testInstallThrowsWhenBuildDirFromConfigIsNotUsable(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+        $this->writeConfig($projectRoot, '{"build_dir": "cache"}');
+        \file_put_contents($projectRoot . \DIRECTORY_SEPARATOR . 'cache', 'not a directory');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Failed to create build directory');
+
+        \set_error_handler(static fn (): bool => true);
+
+        try {
+            ComposerScripts::install($projectRoot);
+        } finally {
+            \restore_error_handler();
+        }
     }
 
     public function testPrivateGetExistingHookFilesFiltersHiddenSampleAndDirectories(): void
@@ -558,6 +665,16 @@ final class ComposerScriptsTest extends TestCase
         return \dirname(__DIR__, 2) .
             \DIRECTORY_SEPARATOR . Config::SRC_DIR .
             \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR;
+    }
+
+    private function writeConfig(string $projectRoot, string $contents): void
+    {
+        $this->assertTrue(
+            \file_put_contents(
+                $projectRoot . \DIRECTORY_SEPARATOR . ProjectConfig::FILE_NAME,
+                $contents,
+            ) !== false,
+        );
     }
 
     private function createVfsProjectStructure(

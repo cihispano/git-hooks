@@ -2,13 +2,42 @@
 
 This page describes how the package behaves today and how it is configured.
 
-## Current state (0.1.0 development)
+## Project configuration (`git-hooks.json`)
 
-Project-level configuration via a `git-hooks.json` file is **planned** (see the restructuring plan, task: "per-project git-hooks.json with opt-in auto-install"). It is **not** available yet. This section documents what the package uses today.
+An optional `git-hooks.json` file in the **project root** lets you control installer behavior:
+
+```json
+{
+    "auto_install": false,
+    "build_dir": "build"
+}
+```
+
+| Key            | Type     | Default | Description                                        |
+| -------------- | -------- | ------- | -------------------------------------------------- |
+| `auto_install` | `bool`   | `false` | Auto-install hooks on `composer install`/`update`. |
+| `build_dir`    | `string` | `build` | QA cache directory (PHPStan, CS Fixer, PHPUnit).   |
+
+- Without the file (or with defaults), hooks are **not** auto-installed: use `composer install-hooks` explicitly.
+- Unknown keys are ignored (forward compatibility). Invalid JSON or wrong value types fail loudly — there is no silent fallback.
+- `composer init-hooks` generates the file above with defaults.
+
+To enable automatic installation in a consumer project, set `"auto_install": true`
+and wire the composer events (composer scripts do not propagate from dependencies):
+
+```json
+{
+    "scripts": {
+        "post-install-cmd": "CiHispano\\ComposerScripts::postInstall",
+        "post-update-cmd": "CiHispano\\ComposerScripts::postUpdate"
+    }
+}
+```
 
 ## Tool discovery and config fallbacks
 
-Each hook looks for the tool's configuration in the **target project** first, and falls back to the package-shared defaults only when none exists in the project root:
+Each hook looks for the tool's configuration in the **target project** first, and
+falls back to the package-shared defaults only when none exists in the project root:
 
 | Tool              | Priority                                                             | Package fallback                    |
 | ----------------- | -------------------------------------------------------------------- | ----------------------------------- |
@@ -17,11 +46,14 @@ Each hook looks for the tool's configuration in the **target project** first, an
 | PHPStan           | `phpstan.neon` → `phpstan.neon.dist`                                 | package `phpstan.neon.dist`         |
 | PHPUnit           | `phpunit.xml` → `phpunit.xml.dist`                                   | package `phpunit.xml.dist`          |
 
-Tools are executed only when the corresponding binary exists in the project's `vendor/bin` (`php-cs-fixer`, `phpcs`, `phpstan`, `phpunit`). Missing tools are skipped with a warning instead of blocking the commit or push.
+Tools are executed only when the corresponding binary exists in the project's
+`vendor/bin` (`php-cs-fixer`, `phpcs`, `phpstan`, `phpunit`). Missing tools are
+skipped with a warning instead of blocking the commit or push.
 
 ## Staged-files scope
 
-- `pre-commit` only inspects files staged for the commit (`git diff --cached --name-only --diff-filter=ACMR`, filtered to `*.php`).
+- `pre-commit` only inspects files staged for the commit
+  (`git diff --cached --name-only --diff-filter=ACMR`, filtered to `*.php`).
 - `pre-push` runs a full-project analysis (PHPUnit on the whole suite and PHPStan over the project root).
 
 ## Commit message validation (commit-msg)
@@ -38,19 +70,15 @@ See [CONVENTIONAL_COMMITS.md](CONVENTIONAL_COMMITS.md) for the full rules.
 
 See [Installation](INSTALLATION.md) — `git commit --no-verify`.
 
-## Future: `git-hooks.json`
+## Future: extended `git-hooks.json`
 
-Planned project-level file to control:
+Planned project-level keys (not available yet):
 
-- `auto_install` (opt-in hook installation on install/update)
-- `build_dir`
 - tool toggles (`phpstan`, `phpcs`, `php_cs_fixer`, `phpunit`)
 - `commit_msg` overrides (`min_length`, `max_length`, `types`)
 - a **tool/config allowlist**: the set of project config files and `vendor/bin` binaries
   the hooks may execute, closing the [trust boundary](INSTALLATION.md#trust-boundary)
   (SEC-001) with an opt-in gate instead of documentation only.
-
-When implemented, this page will show the schema and defaults.
 
 ## Trust boundary (current behavior)
 

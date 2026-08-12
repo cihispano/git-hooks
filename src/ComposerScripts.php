@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace CiHispano;
 
+use CiHispano\Config\ProjectConfig;
 use CiHispano\Util\FileComparator;
 use CiHispano\Util\FilePermissions;
 use CiHispano\Util\GitRepository;
@@ -129,24 +130,62 @@ final class ComposerScripts
     /**
      * Composer post-install wrapper.
      *
-     * Not registered in composer.json: hooks are installed explicitly via
-     * the `install-hooks` script. Kept as a public entry point for projects
-     * that wire it manually.
+     * Gated by ProjectConfig::autoInstall(): hooks are installed only when the
+     * project opts in via git-hooks.json. Explicit installation via the
+     * `install-hooks` script is always available.
      */
     public static function postInstall(): void
     {
-        self::install();
+        self::installIfAutoConfigured();
     }
 
     /**
      * Composer post-update wrapper.
      *
-     * Not registered in composer.json: hooks are installed explicitly via
-     * the `install-hooks` script. Kept as a public entry point for projects
-     * that wire it manually.
+     * Gated by ProjectConfig::autoInstall(): hooks are installed only when the
+     * project opts in via git-hooks.json. Explicit installation via the
+     * `install-hooks` script is always available.
      */
     public static function postUpdate(): void
     {
+        self::installIfAutoConfigured();
+    }
+
+    /**
+     * Generate the default git-hooks.json file in the project root.
+     *
+     * @param string|null $basePath Optional base path for the file
+     *
+     * @throws RuntimeException If the file already exists or cannot be written
+     */
+    public static function initHooks(?string $basePath = null): void
+    {
+        $basePath   = $basePath ?? (\getcwd() ?: '.');
+        $configPath = ProjectConfig::writeDefault($basePath);
+
+        ConsoleLogger::success(
+            'Created ' . ProjectConfig::FILE_NAME . ' at ' . $configPath,
+            true,
+        );
+    }
+
+    /**
+     * Install hooks automatically only when the project opts in.
+     */
+    private static function installIfAutoConfigured(): void
+    {
+        $config = ProjectConfig::load();
+
+        if (! $config->autoInstall()) {
+            ConsoleLogger::info(
+                'Auto-install is disabled. Set "auto_install": true in '
+                . ProjectConfig::FILE_NAME . ' to install hooks automatically.',
+                true,
+            );
+
+            return;
+        }
+
         self::install();
     }
 
@@ -408,7 +447,8 @@ final class ComposerScripts
             throw new RuntimeException("Base path does not exist or is not a directory: {$basePath}");
         }
 
-        $buildPath = PathBuilder::join($basePath, Config::BUILD_DIR);
+        $buildDir  = ProjectConfig::load($basePath)->buildDir();
+        $buildPath = PathBuilder::join($basePath, $buildDir);
 
         if (\is_dir($buildPath)) {
             return;
