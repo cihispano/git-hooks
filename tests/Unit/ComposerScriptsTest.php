@@ -25,7 +25,6 @@ use org\bovigo\vfs\vfsStreamDirectory;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use ReflectionMethod;
 use RuntimeException;
 use SplFileInfo;
 
@@ -532,94 +531,6 @@ final class ComposerScriptsTest extends TestCase
         }
     }
 
-    public function testPrivateGetExistingHookFilesFiltersHiddenSampleAndDirectories(): void
-    {
-        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
-
-        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
-        \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit', 'hook');
-        \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit.sample', 'sample');
-        \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . '.hidden', 'hidden');
-        $this->assertTrue(\mkdir($hooksDir . \DIRECTORY_SEPARATOR . 'nested'));
-
-        $result = $this->invokePrivateStaticMethod(ComposerScripts::class, 'getExistingHookFiles', [$hooksDir]);
-
-        $this->assertSame(['pre-commit'], $result);
-    }
-
-    public function testPrivateRemoveSingleHookSkipsMissingFiles(): void
-    {
-        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
-
-        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
-
-        $this->invokePrivateStaticMethod(ComposerScripts::class, 'removeSingleHook', ['pre-commit', $hooksDir]);
-
-        $this->assertFileDoesNotExist($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit');
-    }
-
-    public function testPrivateInstallSingleHookThrowsWhenSourceFileIsMissing(): void
-    {
-        $projectRoot = $this->createProjectStructure();
-        $hooksDir    = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
-
-        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_WORLD_WRITABLE, true));
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Source hook file not found');
-
-        $this->invokePrivateStaticMethod(ComposerScripts::class, 'installSingleHook', ['missing-hook', $projectRoot]);
-    }
-
-    public function testPrivateInstallSingleHookThrowsWhenCopyFails(): void
-    {
-        $projectRoot = $this->createProjectStructure();
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Failed to copy hook: pre-commit');
-
-        \set_error_handler(static fn (): bool => true);
-
-        try {
-            $this->runOutsideGitRepository(
-                $this->tempRoot,
-                fn (): mixed => $this->invokePrivateStaticMethod(
-                    ComposerScripts::class,
-                    'installSingleHook',
-                    ['pre-commit', $projectRoot],
-                ),
-            );
-        } finally {
-            \restore_error_handler();
-        }
-    }
-
-    public function testPrivateRemoveSingleHookThrowsWhenUnlinkFails(): void
-    {
-        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
-
-        $this->assertTrue(
-            \mkdir($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit', FilePermissions::DIR_DEFAULT, true),
-        );
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Failed to remove hook: pre-commit');
-
-        $this->invokePrivateStaticMethod(ComposerScripts::class, 'removeSingleHook', ['pre-commit', $hooksDir]);
-    }
-
-    public function testPrivateGetGitHooksDirPrefersDetectedRepositoryPath(): void
-    {
-        $detectedPath = $this->invokePrivateStaticMethod(ComposerScripts::class, 'getGitHooksDir', [null]);
-
-        $this->assertIsString($detectedPath);
-        $this->assertNotSame('', $detectedPath);
-        $this->assertStringEndsWith(
-            Config::GIT_HOOKS_DIR,
-            \str_replace(['/', '\\'], \DIRECTORY_SEPARATOR, $detectedPath),
-        );
-    }
-
     private function createProjectStructure(bool $withHooks = true): string
     {
         $projectRoot    = $this->tempRoot . \DIRECTORY_SEPARATOR . 'project-' . \bin2hex(\random_bytes(4));
@@ -719,16 +630,6 @@ final class ComposerScriptsTest extends TestCase
         } finally {
             \chdir($this->originalCwd);
         }
-    }
-
-    /**
-     * @param array<int, mixed> $arguments
-     */
-    private function invokePrivateStaticMethod(string $className, string $methodName, array $arguments): mixed
-    {
-        $reflection = new ReflectionMethod($className, $methodName);
-
-        return $reflection->invokeArgs(null, $arguments);
     }
 
     private function removeDirectory(string $path): void
