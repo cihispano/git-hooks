@@ -77,9 +77,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added unit tests for core classes and utility helpers
 - Added Composer scripts for `test` and `test:coverage`
 
+- Added `tests/Unit/Config/ProjectConfigTest.php` covering defaults, valid/invalid
+  JSON, type validation, unknown-key tolerance and default-file generation.
+- Added `src/Config/ProjectConfig.php`: loads the optional `git-hooks.json` from the
+  project root with strict validation (invalid JSON or wrong value types fail loudly,
+  no silent fallback), exposes `auto_install` and `build_dir` defaults, and can
+  generate the default file (`writeDefault()`).
+- Added a `composer init-hooks` script (`ComposerScripts::initHooks`) that generates
+  a default `git-hooks.json` in the current directory.
+
 ### Changed
 
-- Documented the **local validation contract** in `docs/INSTALLATION.md`: `composer reset &&
+- Registered `post-install-cmd` / `post-update-cmd` in `composer.json`, gated by
+  `"auto_install": true` in `git-hooks.json`: hooks are never installed implicitly
+  unless the project opts in; `composer install-hooks` remains the explicit path.
+- `ComposerScripts::ensureBuildDirectory()` now honors the `build_dir` setting from
+  `git-hooks.json` instead of the hardcoded `build` constant.
+- Documented the `git-hooks.json` schema in `docs/CONFIGURATION.md` and `README.md`,
+  including the note that composer events must be wired in the consumer project's own
+  `composer.json` (scripts do not propagate from dependencies).
+- Updated the README hook output examples (`✔`/`✘` icons, indentation) to match the
+  real packaged hooks.
+- Documented the local validation contract in `docs/INSTALLATION.md`: `composer reset &&
   composer check:all` replicates exactly what CI runs (PHPStan 10, PHPCS, PHP CS Fixer, PHPUnit),
   plus the shell-hook shellcheck/smoke gates.
 - Hardened the distributed shell hooks per the security review:

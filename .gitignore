@@ -726,3 +726,6 @@ FodyWeavers.xsd
 # Additional files built by Visual Studio
 
 # End of https://www.toptal.com/developers/gitignore/api/composer,visualstudio,visualstudiocode,intellij,phpstorm,phpunit,phpcodesniffer,php-cs-fixer,windows,macos,linux,archlinuxpackages
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+graft/
