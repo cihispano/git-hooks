@@ -16,7 +16,11 @@ Install the package as a development dependency in your project:
 composer require --dev cihispano/git-hooks
 ```
 
-> **Note for the current 0.1.0 line:** hooks are **not** auto-installed on `composer install` / `composer update`. The `post-install-cmd` / `post-update-cmd` wiring is not registered in the package's `composer.json`. Hooks are installed only when you run the Composer script explicitly.
+> **Note:** hooks are **not** auto-installed by default. The `post-install-cmd` /
+> `post-update-cmd` events are registered but gated by `"auto_install": true` in
+> `git-hooks.json` (see [Configuration](CONFIGURATION.md)). In consumer projects
+> the events must also be wired in the project's own `composer.json`. Hooks are
+> installed only when you run the Composer script explicitly or opt in.
 
 ## Install the hooks
 

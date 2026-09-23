@@ -5,7 +5,8 @@
 [![License](https://img.shields.io/packagist/l/cihispano/git-hooks.svg)](https://packagist.org/packages/cihispano/git-hooks)
 [![PHP Version](https://img.shields.io/packagist/php-v/cihispano/git-hooks.svg)](https://packagist.org/packages/cihispano/git-hooks)
 
-Automated Git Hooks for CodeIgniter 4 projects. This package ensures your code meets the highest quality standards by running automated checks before every commit.
+Automated Git Hooks for CodeIgniter 4 projects. This package ensures your code
+meets the highest quality standards by running automated checks before every commit.
 
 ## ✨ Features
 
@@ -21,18 +22,16 @@ Automated Git Hooks for CodeIgniter 4 projects. This package ensures your code m
 
 Planned, not yet available:
 
-- **`git-hooks.json`** - Project-level configuration: `auto_install`, `build_dir`, tool
-  toggles (`phpstan`, `phpcs`, `php_cs_fixer`, `phpunit`), `commit_msg` overrides
-  (`min_length`, `max_length`, `types`), and a **tool/config allowlist** to decide which
-  project configuration files and `vendor/bin` binaries the hooks may run (trust gate for
-  SEC-001).
-- **Opt-in auto-install** - Option to install hooks automatically on `composer install`/`update`.
+- **Extended `git-hooks.json`** - Tool toggles (`phpstan`, `phpcs`, `php_cs_fixer`, `phpunit`),
+  `commit_msg` overrides (`min_length`, `max_length`, `types`), and a **tool/config
+  allowlist** to decide which project configuration files and `vendor/bin` binaries the
+  hooks may run (trust gate for SEC-001).
 - **PHP-based hooks** - Replace the current shell scripts with PHP bootstrap scripts that
   delegate to the package classes.
 - **`NO_COLOR` in shell hooks** - Make the installed shell hooks honor `NO_COLOR` (today it
   is respected by the installer/uninstaller console output, not by the hook scripts).
 
-See [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) for the planned configuration schema.
+See [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) for the configuration schema and defaults.
 
 ## 📋 Requirements
 
@@ -45,8 +44,10 @@ See [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md) for the planned configurati
 - Runtime compatibility: the package is supported on PHP 8.1 through 8.4.
 - Development dependency resolution: `composer.lock` is generated with `config.platform.php=8.1.0`.
 - CI validation: tests and static analysis run on PHP 8.1, 8.2, 8.3, and 8.4 in both GitHub Actions and GitLab CI.
-- Coding style checks (`composer sniff` and `composer cs`) run on PHP 8.1 to keep formatter and sniffer output aligned with the minimum supported runtime.
-- When running `composer cs` on PHP newer than 8.1, PHP CS Fixer may show a warning. This is expected; use PHP 8.1 locally if you want warning-free style checks.
+- Coding style checks (`composer sniff` and `composer cs`) run on PHP 8.1 to keep formatter and sniffer output aligne
+  with the minimum supported runtime.
+- When running `composer cs` on PHP newer than 8.1, PHP CS Fixer may show a warning. This is expected; use PHP 8.1
+  locally if you want warning-free style checks.
 
 ## 📦 Installation
 
@@ -108,7 +109,9 @@ Before pushing, the `pre-push` hook runs a full-project validation:
 1. ✅ PHPUnit, if available in the target project
 2. ✅ Full PHPStan analysis
 
-This repository ships its own PHPUnit suite for the package itself. The installed `pre-push` hook is also designed for consumer projects and will run PHPUnit there when it is available. If PHPUnit is not installed in the target project, the hook skips that step and continues with the remaining checks.
+This repository ships its own PHPUnit suite for the package itself. The installed `pre-push` hook is also
+designed for consumer projects and will run PHPUnit there when it is available. If PHPUnit is not installed
+in the target project, the hook skips that step and continues with the remaining checks.
 
 ### Example Output
 
@@ -117,19 +120,19 @@ This repository ships its own PHPUnit suite for the package itself. The installe
    CiHispano: Running Centralized Quality Checks
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[1/4] Checking PHP syntax...
-✓ Syntax is valid
+  [1/4] Checking PHP syntax...
+✔ Syntax is valid
 
-[2/4] Validating code style...
-✓ Coding style verified
+  [2/4] Validating code style...
+✔ Coding style verified
 
-[3/4] Sniffing code standards...
-✓ Standards check passed
+  [3/4] Sniffing code standards...
+✔ Standards check passed
 
-[4/4] Running static analysis...
-✓ Static analysis completed
+  [4/4] Running static analysis...
+✔ Static analysis completed
 
-✓ All checks passed! Proceeding with commit.
+  ✔ All checks passed! Proceeding with commit.
 ```
 
 ### When a Check Fails
@@ -137,9 +140,8 @@ This repository ships its own PHPUnit suite for the package itself. The installe
 If any check fails, the commit will be blocked:
 
 ```bash
-[2/4] Validating code style...
-✗ Style violations found.
-Run: php vendor/bin/php-cs-fixer fix app/Controllers/Home.php
+  [2/4] Validating code style...
+✘ Style violations found.
 ```
 
 Fix the issues and try again:
@@ -156,6 +158,28 @@ git commit -S -m "Your message"
 ```
 
 ## 🛠️ Configuration
+
+### Project configuration (`git-hooks.json`)
+
+An optional `git-hooks.json` file in the project root controls installer behavior:
+
+```json
+{
+    "auto_install": false,
+    "build_dir": "build"
+}
+```
+
+- `auto_install` (`bool`, default `false`): install hooks automatically on
+  `composer install`/`update`. Without it (or with `false`), use
+  `composer install-hooks` explicitly.
+- `build_dir` (`string`, default `build`): QA cache directory (PHPStan, PHP CS Fixer, PHPUnit).
+- `composer init-hooks` generates the file with defaults.
+- Invalid JSON or wrong value types fail loudly — no silent fallback.
+
+> In consumer projects, automatic installation requires wiring the composer events in the
+> project's own `composer.json` (scripts do not propagate from dependencies):
+> `"post-install-cmd": "CiHispano\\ComposerScripts::postInstall"` (and `post-update-cmd`).
 
 ### Skipping Hooks (Not Recommended)
 
@@ -197,7 +221,7 @@ design, and the trust model is documented in
 [`docs/INSTALLATION.md`](docs/INSTALLATION.md#trust-boundary).
 
 For the 0.1.0 line this is documentation only; a `git-hooks.json` allowlist to gate which
-configs and binaries the hooks may run is planned (see [Roadmap](#-roadmap)).
+configs and binaries the hooks may run is planned (see [Roadmap](#%EF%B8%8F-roadmap)).
 
 ## 📊 Composer Scripts
 
@@ -342,7 +366,9 @@ composer test:coverage
 - `composer cs`
 - `composer test`
 
-For a full local validation pass, run `composer check:all`. If you want an HTML coverage report, run `composer test:coverage` and open the generated files under `build/coverage/`.
+For a full local validation pass, run `composer check:all`. If you want an HTML
+coverage report, run `composer test:coverage` and open the generated files under
+`build/coverage/`.
 
 ## 📝 Changelog
 

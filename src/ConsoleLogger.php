@@ -59,6 +59,26 @@ final class ConsoleLogger
     ];
 
     /**
+     * Readable ANSI foreground code for each header background color.
+     *
+     * Badges pair every background with an explicit contrasting foreground so
+     * the title stays legible on both light and dark terminal themes instead
+     * of inheriting the terminal's default text color.
+     *
+     * @var array<string, string>
+     */
+    private const HEADER_FOREGROUND = [
+        'black'   => '37',
+        'red'     => '37',
+        'green'   => '30',
+        'yellow'  => '30',
+        'blue'    => '37',
+        'magenta' => '37',
+        'cyan'    => '30',
+        'white'   => '30',
+    ];
+
+    /**
      * Output stream override, mainly for tests.
      *
      * @var resource|null
@@ -143,6 +163,10 @@ final class ConsoleLogger
     /**
      * Display a styled header with background color.
      *
+     * The badge is painted with a contrasting foreground (see
+     * HEADER_FOREGROUND) plus bold, so the title remains legible regardless
+     * of the terminal's default text color.
+     *
      * @param string $header  The header text to display
      * @param string $bgColor The background color (cyan, red, green, yellow, blue, etc.)
      */
@@ -150,9 +174,10 @@ final class ConsoleLogger
         string $header,
         string $bgColor,
     ): void {
-        $code = self::BACKGROUND[$bgColor] ?? self::BACKGROUND['cyan'];
+        $background = self::BACKGROUND[$bgColor] ?? self::BACKGROUND['cyan'];
+        $foreground = self::HEADER_FOREGROUND[$bgColor] ?? self::HEADER_FOREGROUND['cyan'];
 
-        self::write(' ' . self::paint(" {$header} ", $code, true) . ' ');
+        self::write(' ' . self::paint(" {$header} ", $background, true, $foreground) . ' ');
     }
 
     /**
@@ -279,11 +304,13 @@ final class ConsoleLogger
     }
 
     /**
-     * Apply a background color (and optional bold) to a text segment.
+     * Apply background, optional foreground and bold to a text segment.
      *
-     * @param string $text The text to paint
-     * @param string $code The ANSI background color code
-     * @param bool   $bold Whether to apply bold
+     * @param string $text       The text to paint
+     * @param string $code       The ANSI background color code
+     * @param bool   $bold       Whether to apply bold
+     * @param string $foreground Optional ANSI foreground color code so the text
+     *                           keeps contrast against the background
      *
      * @return string The painted text (plain when colors are disabled)
      */
@@ -291,12 +318,17 @@ final class ConsoleLogger
         string $text,
         string $code,
         bool $bold = false,
+        string $foreground = '',
     ): string {
         if (! self::supportsColor()) {
             return $text;
         }
 
         $modifiers = [$code];
+
+        if ('' !== $foreground) {
+            $modifiers[] = $foreground;
+        }
 
         if ($bold) {
             $modifiers[] = self::BOLD;

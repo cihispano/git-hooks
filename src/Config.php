@@ -51,7 +51,9 @@ final class Config
     /**
      * Default hook files available for installation.
      *
-     * Informative reference matching the hooks shipped in src/Hooks.
+     * Authoritative selection list used by the installer: only entries
+     * present here are copied from the package source directory. It must
+     * match the hooks shipped in src/Hooks.
      *
      * @var list<string>
      */
@@ -64,8 +66,9 @@ final class Config
     /**
      * File extensions to exclude from hook installation.
      *
-     * Reserved for future filtering logic; the current installer ignores
-     * dotfiles and any entry containing a dot.
+     * Reserved for future filtering logic; source hooks are selected through
+     * DEFAULT_HOOKS, while the scan of installed hooks ignores dotfiles and
+     * `.sample` files.
      *
      * @var list<string>
      */

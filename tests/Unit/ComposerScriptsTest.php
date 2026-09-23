@@ -14,6 +14,7 @@ namespace CiHispano\Tests\Unit;
 
 use CiHispano\ComposerScripts;
 use CiHispano\Config;
+use CiHispano\Config\ProjectConfig;
 use CiHispano\ConsoleLogger;
 use CiHispano\Tests\Exceptions\AssertionsException;
 use CiHispano\Util\FilePermissions;
@@ -24,7 +25,6 @@ use org\bovigo\vfs\vfsStreamDirectory;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use ReflectionMethod;
 use RuntimeException;
 use SplFileInfo;
 
@@ -384,6 +384,7 @@ final class ComposerScriptsTest extends TestCase
     public function testPostInstallUsesCurrentWorkingDirectory(): void
     {
         $projectRoot = $this->createProjectStructure();
+        $this->writeConfig($projectRoot, '{"auto_install": true}');
 
         $this->runOutsideGitRepository($projectRoot, static function (): mixed {
             ComposerScripts::postInstall();
@@ -401,6 +402,7 @@ final class ComposerScriptsTest extends TestCase
     public function testPostUpdateReinstallsAfterHookChanges(): void
     {
         $projectRoot = $this->createProjectStructure();
+        $this->writeConfig($projectRoot, '{"auto_install": true}');
 
         $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
             ComposerScripts::install($projectRoot);
@@ -425,92 +427,108 @@ final class ComposerScriptsTest extends TestCase
         );
     }
 
-    public function testPrivateGetExistingHookFilesFiltersHiddenSampleAndDirectories(): void
-    {
-        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
-
-        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
-        \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit', 'hook');
-        \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit.sample', 'sample');
-        \file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . '.hidden', 'hidden');
-        $this->assertTrue(\mkdir($hooksDir . \DIRECTORY_SEPARATOR . 'nested'));
-
-        $result = $this->invokePrivateStaticMethod(ComposerScripts::class, 'getExistingHookFiles', [$hooksDir]);
-
-        $this->assertSame(['pre-commit'], $result);
-    }
-
-    public function testPrivateRemoveSingleHookSkipsMissingFiles(): void
-    {
-        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
-
-        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
-
-        $this->invokePrivateStaticMethod(ComposerScripts::class, 'removeSingleHook', ['pre-commit', $hooksDir]);
-
-        $this->assertFileDoesNotExist($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit');
-    }
-
-    public function testPrivateInstallSingleHookThrowsWhenSourceFileIsMissing(): void
-    {
-        $projectRoot = $this->createProjectStructure();
-        $hooksDir    = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
-
-        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_WORLD_WRITABLE, true));
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Source hook file not found');
-
-        $this->invokePrivateStaticMethod(ComposerScripts::class, 'installSingleHook', ['missing-hook', $projectRoot]);
-    }
-
-    public function testPrivateInstallSingleHookThrowsWhenCopyFails(): void
+    public function testPostInstallSkipsWhenAutoInstallIsNotEnabled(): void
     {
         $projectRoot = $this->createProjectStructure();
 
+        $this->runOutsideGitRepository($projectRoot, static function (): mixed {
+            ComposerScripts::postInstall();
+
+            return null;
+        });
+
+        foreach (Config::DEFAULT_HOOKS as $hook) {
+            $this->assertFileDoesNotExist(
+                $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR . \DIRECTORY_SEPARATOR . $hook,
+            );
+        }
+
+        \rewind($this->output);
+        $output = \stream_get_contents($this->output);
+        $this->assertStringContainsString('Auto-install is disabled', $output);
+        $this->assertStringNotContainsString('Git hooks installed successfully', $output);
+    }
+
+    public function testPostInstallThrowsOnInvalidConfigWithoutFallingBack(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+        $this->writeConfig($projectRoot, '{"auto_install":');
+
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Failed to copy hook: pre-commit');
+        $this->expectExceptionMessage('Invalid git-hooks.json');
+
+        $this->runOutsideGitRepository($projectRoot, static function (): mixed {
+            ComposerScripts::postInstall();
+
+            return null;
+        });
+    }
+
+    public function testInitHooksCreatesDefaultConfigFile(): void
+    {
+        $projectRoot = $this->tempRoot . \DIRECTORY_SEPARATOR . 'init-' . \bin2hex(\random_bytes(4));
+
+        $this->assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
+
+        ComposerScripts::initHooks($projectRoot);
+
+        $configPath = $projectRoot . \DIRECTORY_SEPARATOR . ProjectConfig::FILE_NAME;
+
+        $this->assertFileExists($configPath);
+
+        $configContents = (string) \file_get_contents($configPath);
+        $decoded        = \json_decode($configContents, true);
+        $this->assertIsArray($decoded);
+        $this->assertFalse($decoded['auto_install'] ?? null);
+        $this->assertSame('build', $decoded['build_dir'] ?? null);
+
+        \rewind($this->output);
+        $output = \stream_get_contents($this->output);
+        $this->assertStringContainsString('Created git-hooks.json', $output);
+    }
+
+    public function testInitHooksThrowsWhenConfigFileAlreadyExists(): void
+    {
+        $projectRoot = $this->tempRoot . \DIRECTORY_SEPARATOR . 'init-existing-' . \bin2hex(\random_bytes(4));
+
+        $this->assertTrue(\mkdir($projectRoot, FilePermissions::DIR_DEFAULT, true));
+        $this->writeConfig($projectRoot, '{"auto_install": true}');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('already exists');
+
+        ComposerScripts::initHooks($projectRoot);
+    }
+
+    public function testInstallUsesBuildDirFromProjectConfig(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+        $this->writeConfig($projectRoot, '{"build_dir": "cache"}');
+
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
+
+        $this->assertDirectoryExists($projectRoot . \DIRECTORY_SEPARATOR . 'cache');
+        $this->assertDirectoryDoesNotExist($projectRoot . \DIRECTORY_SEPARATOR . Config::BUILD_DIR);
+    }
+
+    public function testInstallThrowsWhenBuildDirFromConfigIsNotUsable(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+        $this->writeConfig($projectRoot, '{"build_dir": "cache"}');
+        \file_put_contents($projectRoot . \DIRECTORY_SEPARATOR . 'cache', 'not a directory');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Failed to create build directory');
 
         \set_error_handler(static fn (): bool => true);
 
         try {
-            $this->runOutsideGitRepository(
-                $this->tempRoot,
-                fn (): mixed => $this->invokePrivateStaticMethod(
-                    ComposerScripts::class,
-                    'installSingleHook',
-                    ['pre-commit', $projectRoot],
-                ),
-            );
+            ComposerScripts::install($projectRoot);
         } finally {
             \restore_error_handler();
         }
-    }
-
-    public function testPrivateRemoveSingleHookThrowsWhenUnlinkFails(): void
-    {
-        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
-
-        $this->assertTrue(
-            \mkdir($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit', FilePermissions::DIR_DEFAULT, true),
-        );
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Failed to remove hook: pre-commit');
-
-        $this->invokePrivateStaticMethod(ComposerScripts::class, 'removeSingleHook', ['pre-commit', $hooksDir]);
-    }
-
-    public function testPrivateGetGitHooksDirPrefersDetectedRepositoryPath(): void
-    {
-        $detectedPath = $this->invokePrivateStaticMethod(ComposerScripts::class, 'getGitHooksDir', [null]);
-
-        $this->assertIsString($detectedPath);
-        $this->assertNotSame('', $detectedPath);
-        $this->assertStringEndsWith(
-            Config::GIT_HOOKS_DIR,
-            \str_replace(['/', '\\'], \DIRECTORY_SEPARATOR, $detectedPath),
-        );
     }
 
     private function createProjectStructure(bool $withHooks = true): string
@@ -560,6 +578,16 @@ final class ComposerScriptsTest extends TestCase
             \DIRECTORY_SEPARATOR . Config::HOOKS_SOURCE_DIR;
     }
 
+    private function writeConfig(string $projectRoot, string $contents): void
+    {
+        $this->assertTrue(
+            \file_put_contents(
+                $projectRoot . \DIRECTORY_SEPARATOR . ProjectConfig::FILE_NAME,
+                $contents,
+            ) !== false,
+        );
+    }
+
     private function createVfsProjectStructure(
         bool $withHooks = true,
         bool $withGitDirectory = true,
@@ -602,16 +630,6 @@ final class ComposerScriptsTest extends TestCase
         } finally {
             \chdir($this->originalCwd);
         }
-    }
-
-    /**
-     * @param array<int, mixed> $arguments
-     */
-    private function invokePrivateStaticMethod(string $className, string $methodName, array $arguments): mixed
-    {
-        $reflection = new ReflectionMethod($className, $methodName);
-
-        return $reflection->invokeArgs(null, $arguments);
     }
 
     private function removeDirectory(string $path): void
