@@ -157,6 +157,40 @@ final class HookManagerTest extends TestCase
         $this->assertSame(['pre-commit'], $manager->listInstalledHooks($hooksDir));
     }
 
+    public function testListInstalledHooksIgnoresForeignHooksAndBackups(): void
+    {
+        $hooksDir = $this->tempRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
+
+        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
+
+        foreach (Config::DEFAULT_HOOKS as $hook) {
+            $this->assertNotFalse(\file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . $hook, 'hook'));
+        }
+
+        $foreign = [
+            'post-checkout',
+            'post-merge',
+            'pre-commit' . Config::BACKUP_SUFFIX,
+            'pre-commit.sample',
+            '.hidden',
+        ];
+
+        foreach ($foreign as $entry) {
+            $this->assertNotFalse(\file_put_contents($hooksDir . \DIRECTORY_SEPARATOR . $entry, 'kept'));
+        }
+
+        $this->assertTrue(\mkdir($hooksDir . \DIRECTORY_SEPARATOR . 'nested'));
+
+        $manager   = new HookManager($this->filesystem);
+        $installed = $manager->listInstalledHooks($hooksDir);
+        $expected  = Config::DEFAULT_HOOKS;
+
+        \sort($installed);
+        \sort($expected);
+
+        $this->assertSame($expected, $installed);
+    }
+
     public function testListInstalledHooksReturnsEmptyListWhenDirectoryIsMissing(): void
     {
         $missing = $this->tempRoot . \DIRECTORY_SEPARATOR . 'absent-hooks';
@@ -277,6 +311,7 @@ final class HookManagerTest extends TestCase
 
         $this->assertStringContainsString("Hook 'pre-commit' already up to date", $output);
         $this->assertStringNotContainsString('Installed hook: pre-commit', $output);
+        $this->assertFileDoesNotExist($destination . Config::BACKUP_SUFFIX);
         $this->assertSame(
             \file_get_contents($sourceDirectory . \DIRECTORY_SEPARATOR . 'pre-commit'),
             \file_get_contents($destination),
@@ -308,6 +343,103 @@ final class HookManagerTest extends TestCase
             $permissions = \fileperms($destination);
             $this->assertIsInt($permissions);
             $this->assertSame(FilePermissions::FILE_EXECUTABLE, $permissions & 0o777);
+        }
+    }
+
+    public function testInstallHookBacksUpExistingHookBeforeOverwriting(): void
+    {
+        $sourceDirectory = $this->createHooksSourceDirectory();
+        $project         = $this->createProject();
+        $destination     = PathBuilder::join($this->hooksDirectory($project), 'pre-commit');
+        $backup          = $destination . Config::BACKUP_SUFFIX;
+
+        $this->assertNotFalse(\file_put_contents($destination, '# locally customized hook'));
+
+        $manager = new HookManager($this->filesystem, $sourceDirectory);
+        $manager->installHook('pre-commit', $project);
+
+        $this->assertFileExists($backup);
+        $this->assertSame('# locally customized hook', \file_get_contents($backup));
+        $this->assertSame(
+            \file_get_contents($sourceDirectory . \DIRECTORY_SEPARATOR . 'pre-commit'),
+            \file_get_contents($destination),
+        );
+
+        \rewind($this->output);
+        $output = \stream_get_contents($this->output);
+
+        $this->assertStringContainsString('Overwriting existing hook: pre-commit', $output);
+        $this->assertStringContainsString('pre-commit' . Config::BACKUP_SUFFIX, $output);
+    }
+
+    public function testInstallHookWarnsWhenExecutePermissionsCannotBeSet(): void
+    {
+        $sourceDirectory = $this->createHooksSourceDirectory();
+        $project         = $this->createProject();
+        $destination     = PathBuilder::join($this->hooksDirectory($project), 'pre-commit');
+
+        $this->assertNotFalse(\file_put_contents($destination, '# stale hook'));
+
+        $filesystem = $this->createMock(Filesystem::class);
+        $filesystem->method('isDirectory')->willReturn(true);
+        $filesystem->method('exists')->willReturn(true);
+        $filesystem->method('copy')->willReturn(true);
+        $filesystem->method('makeExecutable')->willReturn(false);
+
+        $manager = new HookManager($filesystem, $sourceDirectory);
+        $manager->installHook('pre-commit', $project);
+
+        \rewind($this->output);
+        $output = \stream_get_contents($this->output);
+
+        $this->assertStringContainsString('Could not set execute permissions for: pre-commit', $output);
+        $this->assertStringContainsString('Installed hook: pre-commit', $output);
+    }
+
+    public function testInstallHookAbortsWhenTheBackupCannotBeWritten(): void
+    {
+        $sourceDirectory = $this->createHooksSourceDirectory();
+        $project         = $this->createProject();
+        $destination     = PathBuilder::join($this->hooksDirectory($project), 'pre-commit');
+
+        $this->assertNotFalse(\file_put_contents($destination, '# locally customized hook'));
+
+        $filesystem = $this->createMock(Filesystem::class);
+        $filesystem->method('isDirectory')->willReturn(true);
+        $filesystem->method('exists')->willReturn(true);
+        $filesystem->method('copy')->willReturn(false);
+
+        $manager = new HookManager($filesystem, $sourceDirectory);
+
+        try {
+            $manager->installHook('pre-commit', $project);
+            $this->fail('Expected installHook() to abort when the backup cannot be written.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString(
+                'Failed to back up existing hook: pre-commit',
+                $exception->getMessage(),
+            );
+        }
+
+        $this->assertSame('# locally customized hook', \file_get_contents($destination));
+        $this->assertFileDoesNotExist($destination . Config::BACKUP_SUFFIX);
+    }
+
+    public function testInstallHookRefreshesTheBackupOnEachOverwrite(): void
+    {
+        $sourceDirectory = $this->createHooksSourceDirectory();
+        $project         = $this->createProject();
+        $destination     = PathBuilder::join($this->hooksDirectory($project), 'pre-commit');
+        $backup          = $destination . Config::BACKUP_SUFFIX;
+
+        $manager = new HookManager($this->filesystem, $sourceDirectory);
+
+        foreach (['first customization', 'second customization'] as $customization) {
+            $this->assertNotFalse(\file_put_contents($destination, $customization));
+
+            $manager->installHook('pre-commit', $project);
+
+            $this->assertSame($customization, \file_get_contents($backup));
         }
     }
 
