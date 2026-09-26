@@ -137,6 +137,40 @@ final class ComposerScriptsTest extends TestCase
         );
     }
 
+    public function testInstallBacksUpModifiedHookBeforeOverwriting(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+        $hooksDir    = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
+
+        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
+
+        $destinationHook  = $hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit';
+        $previousContents = "#!/bin/sh\n# locally customized hook";
+        \file_put_contents($destinationHook, $previousContents);
+
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
+
+        $backupHook = $destinationHook . Config::BACKUP_SUFFIX;
+
+        $this->assertFileExists($backupHook);
+        $this->assertSame($previousContents, \file_get_contents($backupHook));
+        $this->assertSame(
+            \file_get_contents(
+                $projectRoot . \DIRECTORY_SEPARATOR .
+                Config::SRC_DIR . \DIRECTORY_SEPARATOR .
+                Config::HOOKS_SOURCE_DIR . \DIRECTORY_SEPARATOR . 'pre-commit',
+            ),
+            \file_get_contents($destinationHook),
+        );
+
+        \rewind($this->output);
+        $output = \stream_get_contents($this->output);
+        $this->assertStringContainsString('Overwriting existing hook: pre-commit', $output);
+        $this->assertStringContainsString('pre-commit' . Config::BACKUP_SUFFIX, $output);
+    }
+
     public function testInstallCopiesPackageHooksToConsumerProject(): void
     {
         $projectRoot = $this->createConsumerStructure();
@@ -342,6 +376,54 @@ final class ComposerScriptsTest extends TestCase
         $this->assertFileExists($hooksDir . \DIRECTORY_SEPARATOR . '.keep');
     }
 
+    public function testUninstallKeepsForeignHooksNotOwnedByThePackage(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
+
+        $hooksDir    = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
+        $foreignHook = $hooksDir . \DIRECTORY_SEPARATOR . 'post-checkout';
+        $contents    = "#!/bin/sh\necho 'foreign hook'";
+
+        \file_put_contents($foreignHook, $contents);
+
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::uninstall($projectRoot);
+        });
+
+        foreach (Config::DEFAULT_HOOKS as $hook) {
+            $this->assertFileDoesNotExist($hooksDir . \DIRECTORY_SEPARATOR . $hook);
+        }
+
+        $this->assertFileExists($foreignHook);
+        $this->assertSame($contents, \file_get_contents($foreignHook));
+    }
+
+    public function testUninstallKeepsHookBackups(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::install($projectRoot);
+        });
+
+        $hooksDir   = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
+        $backupHook = $hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit' . Config::BACKUP_SUFFIX;
+
+        \file_put_contents($backupHook, 'previous version');
+
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::uninstall($projectRoot);
+        });
+
+        $this->assertFileDoesNotExist($hooksDir . \DIRECTORY_SEPARATOR . 'pre-commit');
+        $this->assertFileExists($backupHook);
+        $this->assertSame('previous version', \file_get_contents($backupHook));
+    }
+
     public function testUninstallDoesNothingWhenHooksDirectoryIsMissing(): void
     {
         $projectRoot = $this->createProjectStructure();
@@ -351,6 +433,30 @@ final class ComposerScriptsTest extends TestCase
         });
 
         $this->assertDirectoryDoesNotExist($projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR);
+    }
+
+    public function testUninstallKeepsHooksDirectoryWhenOnlyForeignHooksExist(): void
+    {
+        $projectRoot = $this->createProjectStructure();
+        $hooksDir    = $projectRoot . \DIRECTORY_SEPARATOR . Config::GIT_HOOKS_DIR;
+
+        $this->assertTrue(\mkdir($hooksDir, FilePermissions::DIR_DEFAULT, true));
+
+        $foreignHook = $hooksDir . \DIRECTORY_SEPARATOR . 'post-checkout';
+        $contents    = "#!/bin/sh\necho 'foreign hook'";
+
+        \file_put_contents($foreignHook, $contents);
+
+        $this->runOutsideGitRepository($projectRoot, static function () use ($projectRoot): void {
+            ComposerScripts::uninstall($projectRoot);
+        });
+
+        $this->assertFileExists($foreignHook);
+        $this->assertSame($contents, \file_get_contents($foreignHook));
+
+        \rewind($this->output);
+        $output = \stream_get_contents($this->output);
+        $this->assertStringContainsString('No hooks to uninstall', $output);
     }
 
     public function testUninstallWrapsFailureWhenHooksDirectoryCannotBeRead(): void
