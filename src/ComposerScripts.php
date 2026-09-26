@@ -33,6 +33,10 @@ final class ComposerScripts
     /**
      * Install the Git hooks.
      *
+     * Hooks whose content differs from the package version are backed up to
+     * `<hook>.bak` before being overwritten, so local customizations are
+     * preserved.
+     *
      * @param mixed $event Composer event or base path string
      *
      * @throws RuntimeException
@@ -85,6 +89,10 @@ final class ComposerScripts
 
     /**
      * Uninstall Git hooks.
+     *
+     * Only the hooks shipped by this package (Config::DEFAULT_HOOKS) are
+     * removed: foreign hooks, samples, hidden files and `.bak` backups are
+     * left untouched.
      *
      * @param mixed $event Composer event or base path string
      *
