@@ -31,16 +31,16 @@
         "docs": "https://github.com/cihispano/git-hooks#readme"
     },
     "require": {
-        "php": "^8.1"
+        "php": "^8.1",
+        "friendsofphp/php-cs-fixer": "^3.90",
+        "phpstan/phpstan": "^2",
+        "squizlabs/php_codesniffer": "^4.0"
     },
     "require-dev": {
         "codeigniter/coding-standard": "^1.8",
-        "friendsofphp/php-cs-fixer": "^3.90",
         "mikey179/vfsstream": "^1.6",
-        "phpstan/phpstan": "^2",
         "phpunit/phpunit": "^10.5",
-        "slevomat/coding-standard": "^8.28",
-        "squizlabs/php_codesniffer": "^4.0"
+        "slevomat/coding-standard": "^8.28"
     },
     "autoload": {
         "psr-4": {

@@ -16,6 +16,29 @@ Install the package as a development dependency in your project:
 composer require --dev cihispano/git-hooks
 ```
 
+### Always `--dev`, never in production
+
+`cihispano/git-hooks` must **only** ever be added to `require-dev` — never to `require`:
+
+- **It is a development tool.** The hooks run on `git commit`/`git push` on a developer
+  machine; a deployment server never executes them.
+- **It now pulls the QA toolchain as runtime dependencies.** `phpstan/phpstan`,
+  `friendsofphp/php-cs-fixer` and `squizlabs/php_codesniffer` are declared in this
+  package's `require` (and not in `require-dev`) precisely so the hooks always find their
+  binaries in the consumer's `vendor/bin`. Requiring the package in production would
+  therefore ship those three tools — plus their transitive dependencies — to every
+  production install.
+- **`--dev` is what keeps production clean.** With the package in `require-dev`,
+  `composer install --no-dev` skips the package, its hooks and the whole QA toolchain.
+
+```bash
+# correct
+composer require --dev cihispano/git-hooks
+
+# never do this
+composer require cihispano/git-hooks
+```
+
 > **Note:** hooks are **not** auto-installed by default. The `post-install-cmd` /
 > `post-update-cmd` events are registered but gated by `"auto_install": true` in
 > `git-hooks.json` (see [Configuration](CONFIGURATION.md)). In consumer projects
@@ -36,7 +59,9 @@ The installer:
    with a manual `.git` fallback that also supports worktrees (`gitdir:`/`commondir`) and `core.hooksPath`.
 2. Copies the packaged hooks `pre-commit`, `commit-msg`, and `pre-push`.
 3. Marks them executable (skipped on Windows).
-4. Reuses an existing hook when its content is identical, and overwrites it (`chmod 755`) when it changed.
+4. Reuses an existing hook when its content is identical (no file is touched, no backup is written).
+5. When an existing hook changed, first copies its current content to `<hook>.bak` in the same
+   directory, prints that path in the warning, and only then overwrites it (`chmod 755`).
 
 ## Uninstall the hooks
 
@@ -44,7 +69,10 @@ The installer:
 composer uninstall-hooks
 ```
 
-Only the packaged hooks are removed. Sample files (`*.sample`) and hidden files are left untouched.
+The uninstaller is **non-destructive**: it only removes the three hooks this package ships
+(`pre-commit`, `commit-msg`, `pre-push`). Sample files (`*.sample`), hidden files, nested
+directories, backups (`*.bak`) and any hook not shipped by this package (e.g. `post-checkout`
+or hooks installed by another tool) are left untouched.
 
 ## Verify the installation
 
@@ -53,14 +81,17 @@ git rev-parse --git-path hooks
 ls "$(git rev-parse --git-path hooks)"
 ```
 
-The `ls` output should list at least `pre-commit`, `commit-msg`, and `pre-push`.
+The `ls` output should list at least `pre-commit`, `commit-msg`, and `pre-push`. After an
+install that replaced a changed hook, its `<hook>.bak` backup is listed next to it; those
+backups are yours to keep and are never removed by the uninstaller.
 
 ## Trust boundary
 
 Before installing these hooks, understand **what they execute and with whose privileges**:
 
 - On every `git commit`, `pre-commit` runs the tools present in the project's
-  `vendor/bin` (`php-cs-fixer`, `phpcs`, `phpstan`) against the staged files, using the
+  `vendor/bin` (`php-cs-fixer`, `phpcs`, `phpstan` — installed by this package) against
+  the staged files, using the
   project's own configuration (`phpcs.xml(.dist)`, `phpstan.neon(.dist)`,
   `.php-cs-fixer(.dist).php`, `phpunit.xml(.dist)`) when present, falling back to the
   package defaults otherwise.
@@ -82,16 +113,24 @@ As a rule of thumb:
   achieve code execution through the tools. Reviewing changes to these files is part of
   the normal code review gate.
 
-For the 0.1.0 line this is **documentation only**: there is no allowlist gate yet. A
+At present this is **documentation only**: there is no allowlist gate yet. A
 project allowlist (`git-hooks.json`) to restrict which configs and binaries the hooks may
 run is planned for future releases.
 
 ### `composer install-hooks` may override local hooks
 
 The installer only overwrites a hook when its content **changed**. A local customization
-you wrote on top of an installed hook will be preserved as long as the package hook did
-not change; after a package update the installed hook is refreshed. Re-apply your local
-edits after updates, or move them to a wrapper hook.
+you wrote on top of an installed hook is preserved as long as the package hook did not
+change; after a package update the installed hook is refreshed.
+
+Nothing is lost when that happens: the previous content is copied to `<hook>.bak`
+(e.g. `.git/hooks/pre-commit.bak`) right before the overwrite, and the console warning
+names that file. Re-apply your local edits from the backup after updates, or move them to
+a wrapper hook so they survive every install.
+
+Uninstalling afterwards keeps the backups as well — `composer uninstall-hooks` only
+deletes the hooks listed in `Config::DEFAULT_HOOKS` (`pre-commit`, `commit-msg`,
+`pre-push`).
 
 ## Local validation contract
 

@@ -64,11 +64,22 @@ final class Config
     ];
 
     /**
+     * Suffix of the backup written when an existing hook is replaced.
+     *
+     * Before overwriting a hook whose content differs from the package
+     * version, the current file is copied to `<hook>` plus this suffix, so
+     * local customizations are never silently lost. Backups are not part of
+     * DEFAULT_HOOKS, hence the uninstaller leaves them untouched.
+     */
+    public const BACKUP_SUFFIX = '.bak';
+
+    /**
      * File extensions to exclude from hook installation.
      *
      * Reserved for future filtering logic; source hooks are selected through
-     * DEFAULT_HOOKS, while the scan of installed hooks ignores dotfiles and
-     * `.sample` files.
+     * DEFAULT_HOOKS, and the scan of installed hooks matches entries against
+     * DEFAULT_HOOKS, so dotfiles, `.sample` files, `.bak` backups and hooks
+     * not shipped by this package are all ignored.
      *
      * @var list<string>
      */

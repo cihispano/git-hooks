@@ -15,6 +15,7 @@ namespace CiHispano\Installer;
 use CiHispano\Config;
 use CiHispano\Config\ProjectConfig;
 use CiHispano\ConsoleLogger;
+use CiHispano\Util\FileComparator;
 use CiHispano\Util\Filesystem;
 use CiHispano\Util\GitRepository;
 use CiHispano\Util\PathBuilder;
@@ -24,13 +25,19 @@ use RuntimeException;
  * HookManager.
  *
  * Owns the Git hooks lifecycle: resolving the package source directory and
- * the project hooks directory, listing, installing (with skip-identical
- * detection) and removing hook files, plus the directories the hooks rely on
- * at run time (the QA build cache).
+ * the project hooks directory, listing the hooks this package owns,
+ * installing them (with skip-identical detection and a `.bak` backup of any
+ * hook that is about to change) and removing them, plus the directories the
+ * hooks rely on at run time (the QA build cache).
  *
- * All filesystem access goes through the injected Filesystem collaborator and
- * Git resolution through GitRepository, so this class contains hook domain
- * logic only and ComposerScripts can stay a thin facade.
+ * The lifecycle is deliberately non-destructive: uninstall only touches the
+ * entries listed in Config::DEFAULT_HOOKS, and install never discards the
+ * previous content of a replaced hook.
+ *
+ * All filesystem writes go through the injected Filesystem collaborator,
+ * content comparison through the FileComparator utility and Git resolution
+ * through GitRepository, so this class contains hook domain logic only and
+ * ComposerScripts can stay a thin facade.
  */
 final class HookManager
 {
@@ -165,6 +172,10 @@ final class HookManager
     /**
      * Install a single hook file, skipping identical destinations.
      *
+     * When the destination already exists and differs from the package
+     * version, its current content is copied to `<hook>.bak` before the
+     * overwrite, so a local customization is never lost silently.
+     *
      * @param string      $fileName Name of the hook file inside the source directory
      * @param string|null $basePath Optional base path for resolution
      *
@@ -182,13 +193,18 @@ final class HookManager
         }
 
         if ($this->filesystem->exists($destPath)) {
-            if ($this->filesystem->filesAreIdentical($sourcePath, $destPath)) {
+            if (FileComparator::areIdentical($sourcePath, $destPath)) {
                 ConsoleLogger::info("Hook '{$fileName}' already up to date", true);
 
                 return;
             }
 
-            ConsoleLogger::warning("Overwriting existing hook: {$fileName}", true);
+            $backupPath = $this->backupHook($destPath, $fileName);
+
+            ConsoleLogger::warning(
+                "Overwriting existing hook: {$fileName} (previous version saved to {$backupPath})",
+                true,
+            );
         }
 
         if (! $this->filesystem->copy($sourcePath, $destPath)) {
@@ -233,10 +249,12 @@ final class HookManager
     }
 
     /**
-     * Get the removable hook files from the Git hooks directory.
+     * Get the hook files owned by this package in the Git hooks directory.
      *
-     * Hidden entries, `.sample` files and nested directories are ignored so
-     * samples and placeholders survive an uninstall.
+     * Only entries explicitly listed in Config::DEFAULT_HOOKS are returned:
+     * the uninstaller must never delete a file it did not install, so foreign
+     * hooks (e.g. `post-checkout`), samples, hidden files, nested
+     * directories and `.bak` backups all survive an uninstall.
      *
      * @param string $gitHooksDir Path to the hooks directory
      *
@@ -260,8 +278,7 @@ final class HookManager
 
         return \array_values(\array_filter(
             $entries,
-            fn (string $entry): bool => ! \str_starts_with($entry, '.')
-                && ! \str_ends_with($entry, '.sample')
+            fn (string $entry): bool => \in_array($entry, Config::DEFAULT_HOOKS, true)
                 && $this->filesystem->isFile(PathBuilder::join($gitHooksDir, $entry)),
         ));
     }
@@ -339,5 +356,30 @@ final class HookManager
         }
 
         return $path;
+    }
+
+    /**
+     * Preserve the current content of an existing hook before it is replaced.
+     *
+     * @param string $destPath Path of the hook about to be overwritten
+     * @param string $fileName Name of the hook file (used in error messages)
+     *
+     * @return string Path of the written backup file
+     *
+     * @throws RuntimeException When the backup copy fails, aborting the
+     *                          install so the current version is not lost
+     */
+    private function backupHook(string $destPath, string $fileName): string
+    {
+        $backupPath = $destPath . Config::BACKUP_SUFFIX;
+
+        if (! $this->filesystem->copy($destPath, $backupPath)) {
+            throw new RuntimeException(
+                "Failed to back up existing hook: {$fileName}. "
+                . "Aborting the install so the current version at {$destPath} is not lost.",
+            );
+        }
+
+        return $backupPath;
     }
 }

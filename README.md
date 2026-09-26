@@ -15,6 +15,8 @@ meets the highest quality standards by running automated checks before every com
 - 👃 **PHP_CodeSniffer** - Validates PSR-12 compliance and coding standards.
 - 🎨 **PHP CS Fixer** - Automatically formats code to follow defined styles.
 - 🎯 **Smart Scope** - Only analyzes staged files to keep your workflow fast.
+- 🛡️ **Non-destructive** - `install-hooks` backs up a changed hook to `<hook>.bak` before
+  overwriting it, and `uninstall-hooks` only removes the hooks this package ships.
 - 🌈 **Native ANSI Output** - Beautiful, colorful console feedback with icons (respects `NO_COLOR`).
 - 🔧 **Zero Config** - Works out of the box with sensible defaults for CI4.
 
@@ -57,6 +59,17 @@ Install the package as a development dependency:
 composer require --dev cihispano/git-hooks
 ```
 
+> ⚠️ **Always `--dev`, never as a production dependency.**
+> This package is a development tool: it installs Git hooks that run the QA toolchain
+> before every `commit`/`push`, and it now pulls that toolchain (`phpstan/phpstan`,
+> `friendsofphp/php-cs-fixer`, `squizlabs/php_codesniffer`) as **runtime** dependencies so
+> the hooks always find their binaries in the consumer's `vendor/bin`. Moving those tools
+> to `require` is also why the package itself must stay in `require-dev`: putting it in
+> `require` would ship the hooks *and* the three QA tools (plus their transitive
+> dependencies) to every production install, and `composer install --no-dev` would no
+> longer be able to exclude them. With `--dev`, a production `composer install --no-dev`
+> installs neither the hooks nor the tools.
+
 Then install the hooks into the current repository:
 
 ```bash
@@ -66,6 +79,10 @@ composer install-hooks
 > The hooks are **not** installed automatically on `composer install`/`update`; run
 > `composer install-hooks` once per repository (and again after updating the package)
 > to install or refresh them. Use `composer uninstall-hooks` to remove them.
+>
+> Both operations are **non-destructive**: a hook whose content changed is copied to
+> `<hook>.bak` before being overwritten, and only the hooks shipped by this package are
+> ever removed.
 
 ### Install Location
 
@@ -199,11 +216,27 @@ To remove the Git hooks:
 composer uninstall-hooks
 ```
 
+The uninstaller only removes the hooks this package ships (`pre-commit`, `commit-msg` and
+`pre-push`). Everything else in the hooks directory is left untouched: hooks you or another
+tool installed (`post-checkout`, `pre-rebase`, ...), `*.sample` files, hidden files, nested
+directories and the `<hook>.bak` backups written on install.
+
 ### Customizing the Hooks
 
 The hooks are located in your repository's hooks directory (usually `.git/hooks/`, but
 git-first resolution honors `core.hooksPath` and worktrees) after installation. You can
 modify them if needed, but keep in mind they will be overwritten when you update the package.
+
+Before overwriting a hook whose content differs from the package version, the installer
+copies the current file to `<hook>.bak` in the same directory
+(e.g. `.git/hooks/pre-commit.bak`) and prints that path in the warning. Your local edits
+are therefore never lost silently; restore them with:
+
+```bash
+cp "$(git rev-parse --git-path hooks)/pre-commit.bak" "$(git rev-parse --git-path hooks)/pre-commit"
+```
+
+Hooks that are already identical are skipped, so no backup is written for them.
 
 ## 🔒 Trust boundary
 
@@ -220,7 +253,7 @@ in repositories you already trust** — the repo config overrides the package de
 design, and the trust model is documented in
 [`docs/INSTALLATION.md`](docs/INSTALLATION.md#trust-boundary).
 
-For the 0.1.0 line this is documentation only; a `git-hooks.json` allowlist to gate which
+At present this is documentation only; a `git-hooks.json` allowlist to gate which
 configs and binaries the hooks may run is planned (see [Roadmap](#%EF%B8%8F-roadmap)).
 
 ## 📊 Composer Scripts
@@ -286,13 +319,12 @@ composer test:coverage
 
 ### With PHPStan
 
-Add PHPStan to your project:
+PHPStan ships with this package as a runtime dependency, so there is nothing extra to
+install: `vendor/bin/phpstan` is already available after
+`composer require --dev cihispano/git-hooks`.
 
-```bash
-composer require --dev phpstan/phpstan
-```
-
-Create `phpstan.neon`:
+Create `phpstan.neon` (optional — the hook falls back to the package default when the
+project has none):
 
 ```neon
 parameters:
@@ -303,13 +335,11 @@ parameters:
 
 ### With PHP CS Fixer
 
-Add PHP CS Fixer to your project:
+PHP CS Fixer and PHP_CodeSniffer (`vendor/bin/php-cs-fixer` and `vendor/bin/phpcs`) also
+ship with this package — no extra `composer require` needed.
 
-```bash
-composer require --dev friendsofphp/php-cs-fixer
-```
-
-Create `.php-cs-fixer.dist.php`:
+Create `.php-cs-fixer.dist.php` (optional — the hook falls back to the package default
+when the project has none):
 
 ```php
 <?php

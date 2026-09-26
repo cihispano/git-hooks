@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-25
+
+### Added
+
+- **Hook backups on install**:
+  - `installHook()` now copies the current content of a hook it is about to replace to
+    `<hook>.bak` (same directory, suffix defined by the new `Config::BACKUP_SUFFIX`) and
+    prints that path in the overwrite warning, so local customizations are never lost
+    silently.
+  - Added the `HookManager::backupHook()` helper: when the backup copy fails, the install
+    aborts instead of overwriting the existing hook.
+  - Backups are refreshed on every overwrite and are never touched by `composer uninstall-hooks`.
+  - Added regression tests: `testInstallBacksUpModifiedHookBeforeOverwriting`,
+    `testInstallHookBacksUpExistingHookBeforeOverwriting`,
+    `testInstallHookAbortsWhenTheBackupCannotBeWritten`,
+    `testInstallHookRefreshesTheBackupOnEachOverwrite` and `testUninstallKeepsHookBackups`.
+- **Documentation**:
+  - Documented the backup and non-destructive behavior in `README.md` (features, install
+    note, uninstall scope, hook customization) and `docs/INSTALLATION.md` (installer steps,
+    uninstall guarantees, recovery from `<hook>.bak`).
+
+### Changed
+
+- **QA tools are now runtime dependencies**:
+  - Moved `phpstan/phpstan`, `friendsofphp/php-cs-fixer` and `squizlabs/php_codesniffer`
+    from `require-dev` to `require` (constraints unchanged: `^2`, `^3.90`, `^4.0`), so a
+    project that only declares `cihispano/git-hooks` in its own `require-dev` gets their
+    binaries in `vendor/bin` and the hooks can execute them. Before this change the
+    consumer's `vendor/bin` did not contain them at all, and the hooks silently skipped
+    those steps.
+  - `phpunit/phpunit`, `mikey179/vfsstream`, `codeigniter/coding-standard` and
+    `slevomat/coding-standard` remain dev-only.
+  - `composer.lock` re-resolved: the three tools and their transitive dependencies moved
+    from `packages-dev` to `packages`, with no package changing version.
+  - Verified against a fresh CodeIgniter 4 project requiring only this package:
+    `composer cs`, `composer sniff`, `composer analyze` and the `pre-commit` hook all run
+    and detect violations, and `composer install --no-dev` removes the package and the
+    three tools.
+- **Documentation**:
+  - Documented in `README.md` and `docs/INSTALLATION.md` that the package must always be
+    installed with `composer require --dev` (never as a production dependency) and why.
+  - The *Integration with Existing Projects* section no longer asks consumers to
+    `composer require --dev` PHPStan or PHP CS Fixer: both ship with this package.
+  - Noted in `docs/CONFIGURATION.md` which binaries come with the package and which ones
+    the project must provide (`phpunit`).
+
+### Fixed
+
+- **Non-destructive uninstall**:
+  - `listInstalledHooks()` now selects entries explicitly against `Config::DEFAULT_HOOKS`
+    instead of the previous hidden/`.sample` heuristic, so `composer uninstall-hooks` no
+    longer deletes files the package did not install (foreign hooks such as
+    `post-checkout`, hidden files, nested directories or `.bak` backups).
+  - Added regression tests: `testUninstallKeepsForeignHooksNotOwnedByThePackage`,
+    `testUninstallKeepsHooksDirectoryWhenOnlyForeignHooksExist` and
+    `testListInstalledHooksIgnoresForeignHooksAndBackups`.
+
 ## [0.2.0] - 2024-03-30
 
 ### Added
