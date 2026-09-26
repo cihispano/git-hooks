@@ -59,6 +59,17 @@ Install the package as a development dependency:
 composer require --dev cihispano/git-hooks
 ```
 
+> ⚠️ **Always `--dev`, never as a production dependency.**
+> This package is a development tool: it installs Git hooks that run the QA toolchain
+> before every `commit`/`push`, and it now pulls that toolchain (`phpstan/phpstan`,
+> `friendsofphp/php-cs-fixer`, `squizlabs/php_codesniffer`) as **runtime** dependencies so
+> the hooks always find their binaries in the consumer's `vendor/bin`. Moving those tools
+> to `require` is also why the package itself must stay in `require-dev`: putting it in
+> `require` would ship the hooks *and* the three QA tools (plus their transitive
+> dependencies) to every production install, and `composer install --no-dev` would no
+> longer be able to exclude them. With `--dev`, a production `composer install --no-dev`
+> installs neither the hooks nor the tools.
+
 Then install the hooks into the current repository:
 
 ```bash
@@ -242,7 +253,7 @@ in repositories you already trust** — the repo config overrides the package de
 design, and the trust model is documented in
 [`docs/INSTALLATION.md`](docs/INSTALLATION.md#trust-boundary).
 
-For the 0.1.0 line this is documentation only; a `git-hooks.json` allowlist to gate which
+At present this is documentation only; a `git-hooks.json` allowlist to gate which
 configs and binaries the hooks may run is planned (see [Roadmap](#%EF%B8%8F-roadmap)).
 
 ## 📊 Composer Scripts
@@ -308,13 +319,12 @@ composer test:coverage
 
 ### With PHPStan
 
-Add PHPStan to your project:
+PHPStan ships with this package as a runtime dependency, so there is nothing extra to
+install: `vendor/bin/phpstan` is already available after
+`composer require --dev cihispano/git-hooks`.
 
-```bash
-composer require --dev phpstan/phpstan
-```
-
-Create `phpstan.neon`:
+Create `phpstan.neon` (optional — the hook falls back to the package default when the
+project has none):
 
 ```neon
 parameters:
@@ -325,13 +335,11 @@ parameters:
 
 ### With PHP CS Fixer
 
-Add PHP CS Fixer to your project:
+PHP CS Fixer and PHP_CodeSniffer (`vendor/bin/php-cs-fixer` and `vendor/bin/phpcs`) also
+ship with this package — no extra `composer require` needed.
 
-```bash
-composer require --dev friendsofphp/php-cs-fixer
-```
-
-Create `.php-cs-fixer.dist.php`:
+Create `.php-cs-fixer.dist.php` (optional — the hook falls back to the package default
+when the project has none):
 
 ```php
 <?php
