@@ -15,6 +15,8 @@ meets the highest quality standards by running automated checks before every com
 - 👃 **PHP_CodeSniffer** - Validates PSR-12 compliance and coding standards.
 - 🎨 **PHP CS Fixer** - Automatically formats code to follow defined styles.
 - 🎯 **Smart Scope** - Only analyzes staged files to keep your workflow fast.
+- ⚡ **One Call Per Tool** - All staged files are checked in a single invocation per tool
+  (PHPStan analyses them together), so commit time stays flat as the changeset grows.
 - 🛡️ **Non-destructive** - `install-hooks` backs up a changed hook to `<hook>.bak` before
   overwriting it, and `uninstall-hooks` only removes the hooks this package ships.
 - 🌈 **Native ANSI Output** - Beautiful, colorful console feedback with icons (respects `NO_COLOR`).
