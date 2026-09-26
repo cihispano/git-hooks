@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Hook `php` calls no longer depend on word-splitting**:
+  - `pre-commit` and `pre-push` now write the `-d xdebug.mode=off -d xdebug.log=` flags
+    inline on every `php` invocation instead of expanding `$PHP_XDEBUG_FLAGS`. With the
+    variable, `pre-commit` narrowing `IFS` to a single newline (SEC-002 filename
+    protection) glued the whole flag list into one argument, so PHP printed
+    `PHP: syntax error, unexpected TC_STRING in Unknown on line 7` before every tool run
+    and the `-d` overrides never reached PHP.
+  - The now unneeded `shellcheck disable=SC2086` annotations were removed.
+  - `commit-msg` does not invoke `php` and was left unchanged.
+
 ## [0.3.0] - 2026-09-25
 
 ### Added
