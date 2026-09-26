@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Hook backups on install**:
+  - `installHook()` now copies the current content of a hook it is about to replace to
+    `<hook>.bak` (same directory, suffix defined by the new `Config::BACKUP_SUFFIX`) and
+    prints that path in the overwrite warning, so local customizations are never lost
+    silently.
+  - Added the `HookManager::backupHook()` helper: when the backup copy fails, the install
+    aborts instead of overwriting the existing hook.
+  - Backups are refreshed on every overwrite and are never touched by `composer uninstall-hooks`.
+  - Added regression tests: `testInstallBacksUpModifiedHookBeforeOverwriting`,
+    `testInstallHookBacksUpExistingHookBeforeOverwriting`,
+    `testInstallHookAbortsWhenTheBackupCannotBeWritten`,
+    `testInstallHookRefreshesTheBackupOnEachOverwrite` and `testUninstallKeepsHookBackups`.
+- **Documentation**:
+  - Documented the backup and non-destructive behavior in `README.md` (features, install
+    note, uninstall scope, hook customization) and `docs/INSTALLATION.md` (installer steps,
+    uninstall guarantees, recovery from `<hook>.bak`).
+
+### Fixed
+
+- **Non-destructive uninstall**:
+  - `listInstalledHooks()` now selects entries explicitly against `Config::DEFAULT_HOOKS`
+    instead of the previous hidden/`.sample` heuristic, so `composer uninstall-hooks` no
+    longer deletes files the package did not install (foreign hooks such as
+    `post-checkout`, hidden files, nested directories or `.bak` backups).
+  - Added regression tests: `testUninstallKeepsForeignHooksNotOwnedByThePackage`,
+    `testUninstallKeepsHooksDirectoryWhenOnlyForeignHooksExist` and
+    `testListInstalledHooksIgnoresForeignHooksAndBackups`.
+
 ## [0.2.0] - 2024-03-30
 
 ### Added
