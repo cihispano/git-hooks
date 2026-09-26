@@ -50,6 +50,11 @@ Tools are executed only when the corresponding binary exists in the project's
 `vendor/bin` (`php-cs-fixer`, `phpcs`, `phpstan`, `phpunit`). Missing tools are
 skipped with a warning instead of blocking the commit or push.
 
+`php-cs-fixer`, `phpcs` and `phpstan` are **installed with this package** (they are its
+runtime dependencies), so a project only has to add `cihispano/git-hooks` to its own
+`require-dev` to get them. `phpunit` is the exception: it stays a dev dependency of the
+package and must be provided by the project itself if `pre-push` is to run the suite.
+
 ## Staged-files scope
 
 - `pre-commit` only inspects files staged for the commit
@@ -84,6 +89,6 @@ Planned project-level keys (not available yet):
 
 Today the hooks run, on every `commit`/`push`, the repository's configuration files and
 `vendor/bin` tools with the developer's user privileges — the repository config takes
-priority over the package defaults. This is by design and is **documented only** for the
-0.1.0 line; see [Installation — Trust boundary](INSTALLATION.md#trust-boundary) for the
+priority over the package defaults. This is by design and is **documented only** for
+now; see [Installation — Trust boundary](INSTALLATION.md#trust-boundary) for the
 full model and the planned `git-hooks.json` allowlist.
