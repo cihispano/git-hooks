@@ -36,7 +36,9 @@ The installer:
    with a manual `.git` fallback that also supports worktrees (`gitdir:`/`commondir`) and `core.hooksPath`.
 2. Copies the packaged hooks `pre-commit`, `commit-msg`, and `pre-push`.
 3. Marks them executable (skipped on Windows).
-4. Reuses an existing hook when its content is identical, and overwrites it (`chmod 755`) when it changed.
+4. Reuses an existing hook when its content is identical (no file is touched, no backup is written).
+5. When an existing hook changed, first copies its current content to `<hook>.bak` in the same
+   directory, prints that path in the warning, and only then overwrites it (`chmod 755`).
 
 ## Uninstall the hooks
 
@@ -44,7 +46,10 @@ The installer:
 composer uninstall-hooks
 ```
 
-Only the packaged hooks are removed. Sample files (`*.sample`) and hidden files are left untouched.
+The uninstaller is **non-destructive**: it only removes the three hooks this package ships
+(`pre-commit`, `commit-msg`, `pre-push`). Sample files (`*.sample`), hidden files, nested
+directories, backups (`*.bak`) and any hook not shipped by this package (e.g. `post-checkout`
+or hooks installed by another tool) are left untouched.
 
 ## Verify the installation
 
@@ -53,7 +58,9 @@ git rev-parse --git-path hooks
 ls "$(git rev-parse --git-path hooks)"
 ```
 
-The `ls` output should list at least `pre-commit`, `commit-msg`, and `pre-push`.
+The `ls` output should list at least `pre-commit`, `commit-msg`, and `pre-push`. After an
+install that replaced a changed hook, its `<hook>.bak` backup is listed next to it; those
+backups are yours to keep and are never removed by the uninstaller.
 
 ## Trust boundary
 
@@ -89,9 +96,17 @@ run is planned for future releases.
 ### `composer install-hooks` may override local hooks
 
 The installer only overwrites a hook when its content **changed**. A local customization
-you wrote on top of an installed hook will be preserved as long as the package hook did
-not change; after a package update the installed hook is refreshed. Re-apply your local
-edits after updates, or move them to a wrapper hook.
+you wrote on top of an installed hook is preserved as long as the package hook did not
+change; after a package update the installed hook is refreshed.
+
+Nothing is lost when that happens: the previous content is copied to `<hook>.bak`
+(e.g. `.git/hooks/pre-commit.bak`) right before the overwrite, and the console warning
+names that file. Re-apply your local edits from the backup after updates, or move them to
+a wrapper hook so they survive every install.
+
+Uninstalling afterwards keeps the backups as well — `composer uninstall-hooks` only
+deletes the hooks listed in `Config::DEFAULT_HOOKS` (`pre-commit`, `commit-msg`,
+`pre-push`).
 
 ## Local validation contract
 

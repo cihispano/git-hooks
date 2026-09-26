@@ -15,6 +15,8 @@ meets the highest quality standards by running automated checks before every com
 - 👃 **PHP_CodeSniffer** - Validates PSR-12 compliance and coding standards.
 - 🎨 **PHP CS Fixer** - Automatically formats code to follow defined styles.
 - 🎯 **Smart Scope** - Only analyzes staged files to keep your workflow fast.
+- 🛡️ **Non-destructive** - `install-hooks` backs up a changed hook to `<hook>.bak` before
+  overwriting it, and `uninstall-hooks` only removes the hooks this package ships.
 - 🌈 **Native ANSI Output** - Beautiful, colorful console feedback with icons (respects `NO_COLOR`).
 - 🔧 **Zero Config** - Works out of the box with sensible defaults for CI4.
 
@@ -66,6 +68,10 @@ composer install-hooks
 > The hooks are **not** installed automatically on `composer install`/`update`; run
 > `composer install-hooks` once per repository (and again after updating the package)
 > to install or refresh them. Use `composer uninstall-hooks` to remove them.
+>
+> Both operations are **non-destructive**: a hook whose content changed is copied to
+> `<hook>.bak` before being overwritten, and only the hooks shipped by this package are
+> ever removed.
 
 ### Install Location
 
@@ -199,11 +205,27 @@ To remove the Git hooks:
 composer uninstall-hooks
 ```
 
+The uninstaller only removes the hooks this package ships (`pre-commit`, `commit-msg` and
+`pre-push`). Everything else in the hooks directory is left untouched: hooks you or another
+tool installed (`post-checkout`, `pre-rebase`, ...), `*.sample` files, hidden files, nested
+directories and the `<hook>.bak` backups written on install.
+
 ### Customizing the Hooks
 
 The hooks are located in your repository's hooks directory (usually `.git/hooks/`, but
 git-first resolution honors `core.hooksPath` and worktrees) after installation. You can
 modify them if needed, but keep in mind they will be overwritten when you update the package.
+
+Before overwriting a hook whose content differs from the package version, the installer
+copies the current file to `<hook>.bak` in the same directory
+(e.g. `.git/hooks/pre-commit.bak`) and prints that path in the warning. Your local edits
+are therefore never lost silently; restore them with:
+
+```bash
+cp "$(git rev-parse --git-path hooks)/pre-commit.bak" "$(git rev-parse --git-path hooks)/pre-commit"
+```
+
+Hooks that are already identical are skipped, so no backup is written for them.
 
 ## 🔒 Trust boundary
 
