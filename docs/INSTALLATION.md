@@ -91,10 +91,9 @@ Before installing these hooks, understand **what they execute and with whose pri
 
 - On every `git commit`, `pre-commit` runs the tools present in the project's
   `vendor/bin` (`php-cs-fixer`, `phpcs`, `phpstan` — installed by this package) against
-  the staged files, using the
-  project's own configuration (`phpcs.xml(.dist)`, `phpstan.neon(.dist)`,
-  `.php-cs-fixer(.dist).php`, `phpunit.xml(.dist)`) when present, falling back to the
-  package defaults otherwise.
+  **all** staged files in a single call per tool, using the project's own configuration
+  (`phpcs.xml(.dist)`, `phpstan.neon(.dist)`, `.php-cs-fixer(.dist).php`,
+  `phpunit.xml(.dist)`) when present, falling back to the package defaults otherwise.
 - On every `git push`, `pre-push` runs the project's PHPUnit suite and a full project
   PHPStan analysis.
 - These tools execute **repository-controlled code** (configuration files and

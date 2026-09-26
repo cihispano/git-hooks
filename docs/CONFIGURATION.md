@@ -59,6 +59,13 @@ package and must be provided by the project itself if `pre-push` is to run the s
 
 - `pre-commit` only inspects files staged for the commit
   (`git diff --cached --name-only --diff-filter=ACMR`, filtered to `*.php`).
+- The whole staged set reaches each tool in **one call per commit**: `php-cs-fixer`,
+  `phpcs` and `phpstan` receive every staged file as a single invocation (3 calls
+  instead of one per file), and PHPStan analyses them together so cross-file types
+  resolve and every offending file is reported in one pass. `php -l` is the
+  exception — the CLI accepts a single path per invocation, so lint runs once per file.
+- Files staged but no longer present in the worktree are skipped, so a tool is never
+  invoked with an empty path list.
 - `pre-push` runs a full-project analysis (PHPUnit on the whole suite and PHPStan over the project root).
 
 ## Commit message validation (commit-msg)

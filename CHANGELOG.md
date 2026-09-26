@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-26
+
+### Fixed
+
+- **`pre-commit` runs each QA tool once per commit instead of once per staged file**:
+  - The staged set is flattened into positional parameters once and passed as a single
+    quoted `"$@"` vector to `php-cs-fixer`, `phpcs` and `phpstan`, so 5 staged files go
+    from 15 tool invocations to 3 (measured: 8.86 s → 1.95 s on a CI4 consumer repo).
+  - PHPStan now analyses the whole staged set in one run, so cross-file types are
+    resolved instead of each file being seen in isolation; the failure output also
+    reports every offending file in a single pass instead of stopping at the first one.
+  - `php -l` keeps one call per file (the CLI accepts a single path), and entries
+    staged but absent from the worktree are filtered out so no tool is ever invoked
+    with an empty path list.
+- **Hook `php` calls no longer depend on word-splitting**:
+  - `pre-commit` and `pre-push` now write the `-d xdebug.mode=off -d xdebug.log=` flags
+    inline on every `php` invocation instead of expanding `$PHP_XDEBUG_FLAGS`. With the
+    variable, `pre-commit` narrowing `IFS` to a single newline (SEC-002 filename
+    protection) glued the whole flag list into one argument, so PHP printed
+    `PHP: syntax error, unexpected TC_STRING in Unknown on line 7` before every tool run
+    and the `-d` overrides never reached PHP.
+  - The now unneeded `shellcheck disable=SC2086` annotations were removed.
+  - `commit-msg` does not invoke `php` and was left unchanged.
+
 ## [0.3.0] - 2026-09-25
 
 ### Added

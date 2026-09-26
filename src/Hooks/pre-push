@@ -31,7 +31,9 @@ fi
 VENDOR_BIN="$PROJECT_ROOT/vendor/bin"
 PACKAGE_CONFIG="$PROJECT_ROOT/vendor/cihispano/git-hooks"
 export XDEBUG_MODE=off
-PHP_XDEBUG_FLAGS="-d xdebug.mode=off -d xdebug.log="
+# The `-d` flags are written inline on every `php` call: keeping them in a
+# variable would depend on word-splitting, which breaks as soon as IFS is
+# narrowed anywhere in this script.
 
 printf '\n'
 printf '\033[0;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n'
@@ -52,9 +54,7 @@ if [ -f "$VENDOR_BIN/phpunit" ]; then
     [ ! -f "$PHPUNIT_CONFIG" ] && PHPUNIT_CONFIG="phpunit.xml.dist"
     [ ! -f "$PHPUNIT_CONFIG" ] && PHPUNIT_CONFIG="$PACKAGE_CONFIG/phpunit.xml.dist"
 
-    # "$PHP_XDEBUG_FLAGS" is an intentionally word-split flags list, not a path.
-    # shellcheck disable=SC2086
-    if ! php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/phpunit" -c "$PHPUNIT_CONFIG" --no-coverage --stop-on-failure; then
+    if ! php -d xdebug.mode=off -d xdebug.log= "$VENDOR_BIN/phpunit" -c "$PHPUNIT_CONFIG" --no-coverage --stop-on-failure; then
         printf '\n\033[0;31m✘ Tests failed! Please fix your code before pushing.\033[0m\n\n'
         exit 1
     fi
@@ -75,8 +75,7 @@ if [ -f "$VENDOR_BIN/phpstan" ]; then
     [ ! -f "$STAN_CONFIG" ] && STAN_CONFIG="$PACKAGE_CONFIG/phpstan.neon.dist"
 
     # We analyze the whole project on push to ensure global consistency
-    # shellcheck disable=SC2086
-    if ! php $PHP_XDEBUG_FLAGS "$VENDOR_BIN/phpstan" analyse -c "$STAN_CONFIG" --no-progress --ansi; then
+    if ! php -d xdebug.mode=off -d xdebug.log= "$VENDOR_BIN/phpstan" analyse -c "$STAN_CONFIG" --no-progress --ansi; then
         printf '\n\033[0;31m✘ PHPStan found global issues. Fix them before pushing.\033[0m\n\n'
         exit 1
     fi
