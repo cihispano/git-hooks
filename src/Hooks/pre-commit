@@ -66,11 +66,25 @@ fi
 
 cd "$PROJECT_ROOT" || exit 1
 
+# Flatten the staged list into positional parameters exactly once.
+#
+# The `for` splits on the newline-only IFS set above, so filenames with spaces
+# stay intact; `[ -f ]` drops entries no longer present in the worktree. Every
+# QA tool then receives the whole set as one quoted "$@" argument vector: a
+# single call per tool no matter how many files are staged, and no
+# word-splitting happens at the call site.
+set --
+for FILE in $STAGED_FILES; do
+    if [ -f "$FILE" ]; then
+        set -- "$@" "$FILE"
+    fi
+done
+
 # ══════════════════════════════════════════════════════════════════════════
 # 1. PHP LINT (Syntax Check)
 # ══════════════════════════════════════════════════════════════════════════
 printf '\033[1;34m  [1/4] Checking PHP syntax...\033[0m\n'
-for FILE in $STAGED_FILES; do
+for FILE in "$@"; do
     if [ -f "$FILE" ]; then
         if ! php -d xdebug.mode=off -d xdebug.log= -l -d display_errors=0 "$FILE" > /dev/null 2>&1; then
             printf '\033[0;31m✘ Syntax error in: %s\033[0m\n' "$FILE"
@@ -92,14 +106,13 @@ if [ -f "$VENDOR_BIN/php-cs-fixer" ]; then
     [ ! -f "$CS_CONFIG" ] && CS_CONFIG=".php-cs-fixer.dist.php"
     [ ! -f "$CS_CONFIG" ] && CS_CONFIG="$PACKAGE_CONFIG/.php-cs-fixer.dist.php"
 
-    for FILE in $STAGED_FILES; do
-        if [ -f "$FILE" ]; then
-            if ! php -d xdebug.mode=off -d xdebug.log= "$VENDOR_BIN/php-cs-fixer" fix --config="$CS_CONFIG" --dry-run --diff --ansi "$FILE"; then
-                printf '\033[0;31m✘ Style violations found.\033[0m\n'
-                exit 1
-            fi
+    # One call receives every staged file as its own argument.
+    if [ $# -gt 0 ]; then
+        if ! php -d xdebug.mode=off -d xdebug.log= "$VENDOR_BIN/php-cs-fixer" fix --config="$CS_CONFIG" --dry-run --diff --ansi "$@"; then
+            printf '\033[0;31m✘ Style violations found.\033[0m\n'
+            exit 1
         fi
-    done
+    fi
     printf '\033[0;32m✔ Coding style verified\033[0m\n'
 fi
 
@@ -114,14 +127,13 @@ if [ -f "$VENDOR_BIN/phpcs" ]; then
     [ ! -f "$PHPCS_CONFIG" ] && PHPCS_CONFIG="phpcs.xml.dist"
     [ ! -f "$PHPCS_CONFIG" ] && PHPCS_CONFIG="$PACKAGE_CONFIG/phpcs.xml.dist"
 
-    for FILE in $STAGED_FILES; do
-        if [ -f "$FILE" ]; then
-            if ! php -d xdebug.mode=off -d xdebug.log= "$VENDOR_BIN/phpcs" --standard="$PHPCS_CONFIG" --colors "$FILE"; then
-                printf '\033[0;31m✘ Standard violations detected.\033[0m\n'
-                exit 1
-            fi
+    # One call receives every staged file as its own argument.
+    if [ $# -gt 0 ]; then
+        if ! php -d xdebug.mode=off -d xdebug.log= "$VENDOR_BIN/phpcs" --standard="$PHPCS_CONFIG" --colors "$@"; then
+            printf '\033[0;31m✘ Standard violations detected.\033[0m\n'
+            exit 1
         fi
-    done
+    fi
     printf '\033[0;32m✔ Standards check passed\033[0m\n'
 fi
 
@@ -136,14 +148,14 @@ if [ -f "$VENDOR_BIN/phpstan" ]; then
     [ ! -f "$STAN_CONFIG" ] && STAN_CONFIG="phpstan.neon.dist"
     [ ! -f "$STAN_CONFIG" ] && STAN_CONFIG="$PACKAGE_CONFIG/phpstan.neon.dist"
 
-    for FILE in $STAGED_FILES; do
-        if [ -f "$FILE" ]; then
-            if ! php -d xdebug.mode=off -d xdebug.log= "$VENDOR_BIN/phpstan" analyse -c "$STAN_CONFIG" --no-progress --ansi "$FILE"; then
-                printf '\033[0;31m✘ PHPStan found logic or type errors.\033[0m\n'
-                exit 1
-            fi
+    # One call analyses the whole staged set, which also lets PHPStan resolve
+    # cross-file types instead of seeing each file in isolation.
+    if [ $# -gt 0 ]; then
+        if ! php -d xdebug.mode=off -d xdebug.log= "$VENDOR_BIN/phpstan" analyse -c "$STAN_CONFIG" --no-progress --ansi "$@"; then
+            printf '\033[0;31m✘ PHPStan found logic or type errors.\033[0m\n'
+            exit 1
         fi
-    done
+    fi
     printf '\033[0;32m✔ Static analysis completed\033[0m\n'
 fi
 
